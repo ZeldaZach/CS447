@@ -3,6 +3,7 @@
 //
 
 #include "KNearestNeighbors.h"
+#include "KDTree.h"
 #include <assert.h>
 #include <ctime>
 #include <fcntl.h>
@@ -14,6 +15,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <utility>
 #include <vector>
 
 KNearestNeighbors::KNearestNeighbors() = default;
@@ -58,7 +60,7 @@ void KNearestNeighbors::readFile(std::string file_path)
     /*
      * Read file type string.
      */
-    unsigned long n = static_cast<unsigned long>(strnlen(file_mem, 8));
+    auto n = static_cast<unsigned long>(strnlen(file_mem, 8));
     std::string file_type(file_mem, n);
 
     // Start to read data, skip the file type string.
@@ -155,7 +157,7 @@ void KNearestNeighbors::writeResults(std::string file_path)
 {
     if (file_exists(file_path)) {
         std::cerr << "Output file exists, renaming it" << std::endl;
-        if (std::rename(file_path.c_str(), (file_path + std::to_string(std::time(0))).c_str()) < 0) {
+        if (std::rename(file_path.c_str(), (file_path + std::to_string(std::time(nullptr))).c_str()) < 0) {
             std::cerr << "Failed to rename: " << strerror(errno) << std::endl;
             exit(1);
         }
@@ -172,4 +174,9 @@ bool KNearestNeighbors::file_exists(std::string file_path)
 {
     std::ifstream ifile(file_path.c_str());
     return static_cast<bool>(ifile);
+}
+
+void KNearestNeighbors::create_tree()
+{
+    tree = KDTree(points).getRoot();
 }

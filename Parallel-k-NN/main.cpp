@@ -36,4 +36,7 @@ int main(int argc, char **argv)
     }
 
     knn.writeResults(argv[3]);
+
+    // Build tree
+    knn.create_tree();
 }

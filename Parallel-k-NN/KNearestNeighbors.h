@@ -5,6 +5,7 @@
 #ifndef PARALLEL_K_NN_KNEARESTNEIGHBORS_H
 #define PARALLEL_K_NN_KNEARESTNEIGHBORS_H
 
+#include "KDTree.h"
 #include <string>
 #include <vector>
 
@@ -16,11 +17,12 @@ public:
     void readFile(std::string);
     void writeResults(std::string);
     bool file_exists(std::string);
+    void create_tree();
 
     class Reader
     {
     public:
-        Reader(const char *p) : ptr{p}
+        explicit Reader(const char *p) : ptr{p}
         {
         }
         template <typename T> Reader &operator>>(T &o)
@@ -72,6 +74,7 @@ public:
     std::vector<std::vector<float>> points;
     std::vector<std::vector<float>> queries;
     Node *points_node, *query_node;
+    KDTree::KDNode *tree;
 };
 
 #endif // PARALLEL_K_NN_KNEARESTNEIGHBORS_H
