@@ -18,7 +18,9 @@
 #include <utility>
 #include <vector>
 
-KNearestNeighbors::KNearestNeighbors() = default;
+KNearestNeighbors::KNearestNeighbors() : tree(nullptr)
+{
+}
 
 KNearestNeighbors::~KNearestNeighbors() = default;
 
@@ -172,11 +174,16 @@ void KNearestNeighbors::writeResults(std::string file_path)
 
 bool KNearestNeighbors::file_exists(std::string file_path)
 {
-    std::ifstream ifile(file_path.c_str());
-    return static_cast<bool>(ifile);
+    std::ifstream file(file_path.c_str());
+    return static_cast<bool>(file);
 }
 
 void KNearestNeighbors::create_tree()
 {
-    tree = KDTree(points).getRoot();
+    tree = new KDTree(points);
+}
+
+std::vector<float> KNearestNeighbors::getNearestNeighbor(std::vector<float> input)
+{
+    return tree->getNearestNeighbor(input)->point;
 }

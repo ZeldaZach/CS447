@@ -17,7 +17,8 @@ public:
     void readFile(std::string);
     void writeResults(std::string);
     bool file_exists(std::string);
-    void create_tree();
+
+    std::vector<float> getNearestNeighbor(std::vector<float>);
 
     class Reader
     {
@@ -74,7 +75,10 @@ public:
     std::vector<std::vector<float>> points;
     std::vector<std::vector<float>> queries;
     Node *points_node, *query_node;
-    KDTree::KDNode *tree;
+    void create_tree();
+
+private:
+    KDTree *tree;
 };
 
 #endif // PARALLEL_K_NN_KNEARESTNEIGHBORS_H

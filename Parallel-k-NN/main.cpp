@@ -17,14 +17,16 @@ int main(int argc, char **argv)
     KNearestNeighbors knn;
 
     knn.readFile(std::string(argv[1]));
-    knn.readFile(std::string(argv[2]));
-
+    std::cout << "POINTS IN FILE" << std::endl;
     for (const auto &t : knn.points) {
         for (const auto u : t) {
             std::cout << std::setw(15) << u;
         }
         std::cout << std::endl;
     }
+
+    /*knn.readFile(std::string(argv[2]));
+
 
     std::cout << std::endl;
 
@@ -33,10 +35,17 @@ int main(int argc, char **argv)
             std::cout << std::setw(15) << u;
         }
         std::cout << std::endl;
-    }
+    }*/
 
-    knn.writeResults(argv[3]);
-
-    // Build tree
+    std::cout << "\nCLOSEST POINT TO 0.0" << std::endl;
+    // Create tree and test
     knn.create_tree();
+    std::vector<float> test_float({100.0, 27.0});
+    auto result = knn.getNearestNeighbor(test_float);
+    for (float &i : result) {
+        std::cout << std::setw(15) << i;
+    }
+    std::cout << std::endl;
+
+    // knn.writeResults(argv[3]);
 }
