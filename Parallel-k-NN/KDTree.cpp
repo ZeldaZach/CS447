@@ -113,7 +113,7 @@ KDTree::Node *KDTree::deleteNode(KDTree::Node *root, std::vector<float> point, u
         return nullptr;
     }
 
-    depth %= depth % point.size();
+    depth %= point.size();
 
     if (root->point == point) {
         if (root->higher_child) {
