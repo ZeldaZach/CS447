@@ -10,7 +10,7 @@
 
 KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(buildTree(std::move(points), 0))
 {
-    postorder(root_node);
+    // postorder(root_node);
 }
 
 KDTree::~KDTree()
