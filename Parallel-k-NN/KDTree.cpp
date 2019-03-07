@@ -163,7 +163,13 @@ KDTree::Node *KDTree::findMinimum(KDTree::Node *root, unsigned long dimension, u
     Node *min_lower = findMinimum(root->lower_child, dimension, depth + 1);
     Node *min_higher = findMinimum(root->higher_child, dimension, depth + 1);
 
-    for (unsigned long i = 0; i < min_lower->point.size(); i++) {
+    if (!min_lower) {
+        return min_higher;
+    } else if (!min_higher) {
+        return min_lower;
+    }
+
+    for (unsigned long i = 0; i < root->point.size(); i++) {
         if (min_lower->point.at(i) < min_higher->point.at(i)) {
             return min_lower;
         }
