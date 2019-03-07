@@ -23,7 +23,6 @@ public:
     ~KDTree();
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
     Node *getRoot();
-    void postorder(Node *p, int indent = 0);
 
 private:
     KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
@@ -33,10 +32,12 @@ private:
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
 
     void deleteTree(Node *root);
+    static std::string vectorToString(const std::vector<float> &);
 
 private:
     Node *root_node;
-    std::priority_queue<Node *> priority_queue;
+    typedef std::pair<float, Node *> queue_pair;
+    std::priority_queue<queue_pair, std::vector<queue_pair>, std::greater<>> priority_queue;
     unsigned long how_many_neighbors;
 };
 #endif // PARALLEL_K_NN_KDTREE_H

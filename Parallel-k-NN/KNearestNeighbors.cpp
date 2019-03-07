@@ -34,9 +34,7 @@ void KNearestNeighbors::readFile(char *file_path)
     }
 
     // Get the actual size of the file.
-    struct stat sb
-    {
-    };
+    struct stat sb;
     int rv = fstat(fd, &sb);
     assert(rv == 0);
 
@@ -69,9 +67,7 @@ void KNearestNeighbors::readFile(char *file_path)
     Reader reader{file_mem + 8};
 
     if (file_type == "TRAINING") {
-        unsigned long id;
-        unsigned long n_points;
-        unsigned long n_dims;
+        unsigned long id, n_points, n_dims;
 
         reader >> id >> n_points >> n_dims;
 
@@ -91,11 +87,7 @@ void KNearestNeighbors::readFile(char *file_path)
         // Create the KD-Tree of training data
         this->points_node = new TrainingNode(std::string(file_type), id, n_points, n_dims);
     } else if (file_type == "QUERY") {
-        unsigned long id;
-        unsigned long n_queries;
-        unsigned long n_dims;
-        unsigned long n_neighbors;
-
+        unsigned long id, n_queries, n_dims, n_neighbors;
         reader >> id >> n_queries >> n_dims >> n_neighbors;
 
         for (unsigned long i = 0; i < n_queries; i++) {
@@ -112,23 +104,15 @@ void KNearestNeighbors::readFile(char *file_path)
 
         this->query_node = new QueryNode(std::string(file_type), id, n_queries, n_neighbors);
     } else if (file_type == "RESULT") {
-        unsigned long training_id;
-        unsigned long query_id;
-        unsigned long result_id;
-        unsigned long n_queries;
-        unsigned long n_dims;
-        unsigned long n_neighbors;
-
+        unsigned long training_id, query_id, result_id, n_queries, n_dims, n_neighbors;
         reader >> training_id >> query_id >> result_id >> n_queries >> n_dims >> n_neighbors;
 
         std::cout << pref << "Training file ID: " << std::setw(16) << std::setfill('0') << training_id << std::dec
                   << std::endl;
-
         std::cout << pref << "Query file ID: " << std::setw(16) << std::setfill('0') << query_id << std::dec
                   << std::endl;
         std::cout << pref << "Result file ID: " << std::setw(16) << std::setfill('0') << result_id << std::dec
                   << std::endl;
-
         std::cout << pref << "Number of queries: " << n_queries << std::endl;
         std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
         std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;
@@ -177,19 +161,22 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
 
     // HEADER
     out_file.write("RESULT\0\0", 8);
-    out_file.write(reinterpret_cast<char *>(&(this->points_node->file_id)), 8);
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->file_id)), 8);
+    out_file.write(reinterpret_cast<char *>(&this->points_node->file_id), 8);
+    out_file.write(reinterpret_cast<char *>(&this->query_node->file_id), 8);
     out_file.write(reinterpret_cast<char *>(&random_id), 8);
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->queries)), 8);
-    out_file.write(reinterpret_cast<char *>(&(this->points_node->dimensions)), 8);
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->neighbors)), 8);
+    out_file.write(reinterpret_cast<char *>(&this->query_node->queries), 8);
+    out_file.write(reinterpret_cast<char *>(&this->points_node->dimensions), 8);
+    out_file.write(reinterpret_cast<char *>(&this->query_node->neighbors), 8);
 
     // BODY
-    for (const auto &test_point : getQueries()) {
-        auto result = getNearestNeighbors(test_point);
-
-        for (auto dim : result) {
-            out_file.write(reinterpret_cast<char *>(&dim), sizeof(reinterpret_cast<char *>(&dim)));
+    for (const auto &query_point : getQueries()) {
+        std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
+        for (const auto &neighbor : neighbors) {
+            for (auto point : neighbor) {
+                char *dim_data = reinterpret_cast<char *>(&point);
+                out_file.write(dim_data, sizeof(dim_data));
+                std::cout << *reinterpret_cast<float *>(dim_data) << " : " << sizeof(dim_data) << std::endl;
+            }
         }
     }
 

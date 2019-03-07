@@ -33,8 +33,10 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
     std::vector<std::vector<float>> return_value;
 
     for (unsigned int i = 0; i < how_many_neighbors && !priority_queue.empty(); i++) {
-        return_value.push_back(priority_queue.top()->point);
+        return_value.push_back(priority_queue.top().second->point);
         priority_queue.pop();
+
+        // std::cout << vectorToString(return_value.at(i)) << std::endl;
     }
 
     return return_value;
@@ -77,10 +79,12 @@ KDTree::Node *KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *roo
 {
     // End of tree
     if (!root) {
-        return priority_queue.top();
+        return priority_queue.top().second;
     }
 
-    priority_queue.push(root);
+    // Distance between the root and the input
+    auto e_dist = euclidianDistance(root->point, input->point);
+    priority_queue.push(std::make_pair<>(e_dist, root));
 
     // Cycle of dimensions
     depth %= input->point.size();
@@ -92,9 +96,6 @@ KDTree::Node *KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *roo
     } else {
         check_point = getNearestNeighbors(input, root->higher_child, depth + 1);
     }
-
-    // Distance between the root and the input
-    auto e_dist = euclidianDistance(root->point, input->point);
 
     if (check_point) {
         // Distance between "best" found point and input
@@ -145,33 +146,14 @@ void KDTree::deleteTree(KDTree::Node *root)
     delete root;
 }
 
-std::string vectorize(std::vector<float> v)
+std::string KDTree::vectorToString(const std::vector<float> &v)
 {
     std::string ret("(");
-
-    for (auto const &p : v) {
-        ret += std::to_string(p) + ",";
+    for (const float &p : v) {
+        ret += std::to_string(p) + ", ";
     }
+    ret.pop_back();
     ret.pop_back();
     ret += ")";
     return ret;
-}
-
-void KDTree::postorder(Node *p, int indent)
-{
-    if (p) {
-        if (p->higher_child) {
-            postorder(p->higher_child, indent + 4);
-        }
-        if (indent) {
-            std::cout << std::setw(indent) << ' ';
-        }
-        if (p->higher_child)
-            std::cout << " /\n" << std::setw(indent) << ' ';
-        std::cout << vectorize(p->point) << "\n ";
-        if (p->lower_child) {
-            std::cout << std::setw(indent) << ' ' << " \\\n";
-            postorder(p->lower_child, indent + 4);
-        }
-    }
 }
