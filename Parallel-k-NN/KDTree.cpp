@@ -7,6 +7,7 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <queue>
 
 KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(buildTree(std::move(points), 0))
 {

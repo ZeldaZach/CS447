@@ -4,7 +4,6 @@
 
 #include "KNearestNeighbors.h"
 #include "KDTree.h"
-#include <assert.h>
 #include <ctime>
 #include <fcntl.h>
 #include <fstream>
