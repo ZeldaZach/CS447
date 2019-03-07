@@ -97,7 +97,7 @@ float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<
 {
     float value = 0;
     for (unsigned long i = 0; i < p1.size(); i++) {
-        value += std::powf(p1.at(i) - p2.at(i), 2.0);
+        value += std::pow(p1.at(i) - p2.at(i), 2.0);
     }
 
     return std::sqrt(value);

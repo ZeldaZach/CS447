@@ -222,7 +222,7 @@ unsigned int KNearestNeighbors::getRandomData()
         char cs[sizeof(unsigned int)];
     } u{};
 
-    std::ifstream random_file("/dev/urandom", O_RDONLY);
+    std::ifstream random_file("/dev/urandom", std::ios::in);
     random_file.read(u.cs, sizeof(u.cs));
     random_file.close();
 

@@ -8,6 +8,8 @@
 #include "KDTree.h"
 #include <string>
 #include <vector>
+#include <assert.h>
+#include <cstring>
 
 class KNearestNeighbors
 {
