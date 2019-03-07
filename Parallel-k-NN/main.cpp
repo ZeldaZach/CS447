@@ -7,65 +7,47 @@
 #include <iostream>
 #include <string>
 
+void printVector(const std::vector<float> &v)
+{
+    for (float i : v) {
+        std::cout << std::setw(10) << i;
+    }
+    std::cout << std::endl;
+}
+
 int main(int argc, char **argv)
 {
     if (argc != 4) {
-        std::cerr << "Usage: Invalid" << std::endl;
+        std::cerr << "Usage: ./k-nn <n_cores> <training_file> <query_file> <result_file>" << std::endl;
         exit(1);
     }
 
     KNearestNeighbors knn;
 
-    knn.readFile(std::string(argv[1]));
+    // Training data
+    knn.readFile(argv[1]);
+
+    // Query data
+    knn.readFile(argv[2]);
+
+    /*
     std::cout << "POINTS IN FILE" << std::endl;
-    for (const auto &t : knn.points) {
-        for (const auto u : t) {
-            std::cout << std::setw(15) << u;
-        }
-        std::cout << std::endl;
+    for (const auto &t : knn.getPoints()) {
+        printVector(t);
     }
 
-    /*knn.readFile(std::string(argv[2]));
-
-
-    std::cout << std::endl;
-
-    for (const auto &t : knn.queries) {
-        for (const auto u : t) {
-            std::cout << std::setw(15) << u;
-        }
-        std::cout << std::endl;
-    }*/
-
-    // Create tree and test
-    knn.createTree();
-
-    std::vector<std::vector<float>> test_points({{880.0, -350.0}, {0, 0}, {-1000, -500}});
-
-    for (const auto &test_point : test_points) {
+    for (const auto &test_point : knn.getQueries()) {
         auto result = knn.getNearestNeighbor(test_point);
 
         std::cout << "Test Point:";
-        for (float i : test_point) {
-            std::cout << std::setw(15) << i;
-        }
-        std::cout << std::endl;
+        printVector(test_point);
 
         std::cout << "Closest Point:";
-        for (float i : result) {
-            std::cout << std::setw(15) << i;
-        }
-        std::cout << std::endl;
+        printVector(result);
     }
+    */
 
-    /*
-    Test Point:            880           -350
-    Closest Point:         884.06       -363.149
-    Test Point:              0              0
-    Closest Point:        100.213        27.4071
-    Test Point:          -1000           -500
-    Closest Point:       -911.686       -619.303
-     */
-
-    // knn.writeResults(argv[3]);
+    // Generate and output results
+    std::string output_file = knn.generateAndWriteResults(argv[3]);
+    knn.readFile(const_cast<char *>(output_file.c_str()));
 }

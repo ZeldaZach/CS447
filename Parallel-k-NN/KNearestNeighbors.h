@@ -14,12 +14,26 @@ class KNearestNeighbors
 public:
     explicit KNearestNeighbors();
     ~KNearestNeighbors();
-    void readFile(std::string);
-    void writeResults(std::string);
-    bool fileExists(std::string);
-
+    void readFile(char *);
+    std::string generateAndWriteResults(char *);
     std::vector<float> getNearestNeighbor(std::vector<float>);
 
+    inline std::vector<std::vector<float>> getPoints() const
+    {
+        return points;
+    }
+
+    inline std::vector<std::vector<float>> getQueries() const
+    {
+        return queries;
+    }
+
+private:
+    bool fileExists(const char *);
+    void createTree();
+    unsigned int getRandomData();
+
+private:
     class Reader
     {
     public:
@@ -71,13 +85,11 @@ public:
         int neighbors;
     };
 
-    // private:
+private:
     std::vector<std::vector<float>> points;
     std::vector<std::vector<float>> queries;
-    Node *points_node, *query_node;
-    void createTree();
-
-private:
+    TrainingNode *points_node;
+    QueryNode *query_node;
     KDTree *tree;
 };
 

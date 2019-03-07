@@ -22,9 +22,9 @@ KNearestNeighbors::KNearestNeighbors() : tree(nullptr)
 
 KNearestNeighbors::~KNearestNeighbors() = default;
 
-void KNearestNeighbors::readFile(std::string file_path)
+void KNearestNeighbors::readFile(char *file_path)
 {
-    int fd = open(file_path.c_str(), O_RDONLY);
+    int fd = open(file_path, O_RDONLY);
     if (fd < 0) {
         int en = errno;
         std::cerr << "Couldn't open " << file_path << ": " << strerror(en) << "." << std::endl;
@@ -86,7 +86,9 @@ void KNearestNeighbors::readFile(std::string file_path)
             this->points.push_back(dimensions);
         }
 
+        // Create the KD-Tree of training data
         this->points_node = new TrainingNode(std::string(file_type), id, n_points, n_dims);
+        createTree();
 
     } else if (file_type == "QUERY") {
         uint64_t id;
@@ -130,6 +132,7 @@ void KNearestNeighbors::readFile(std::string file_path)
         std::cout << pref << "Number of queries: " << n_queries << std::endl;
         std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
         std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;
+        return;
         for (std::uint64_t i = 0; i < n_queries; i++) {
             std::cout << pref << "Result " << i << ": ";
             for (std::uint64_t j = 0; j < n_dims; j++) {
@@ -153,26 +156,51 @@ void KNearestNeighbors::readFile(std::string file_path)
     assert(rv == 0);
 }
 
-void KNearestNeighbors::writeResults(std::string file_path)
+std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
 {
-    if (fileExists(file_path)) {
+    const char *random_id = std::to_string(getRandomData()).c_str();
+
+    std::string output_path = std::string(file_path) + "_" + std::string(random_id) + ".dat";
+
+    if (fileExists(output_path.c_str())) {
         std::cerr << "Output file exists, renaming it" << std::endl;
-        if (std::rename(file_path.c_str(), (file_path + std::to_string(std::time(nullptr))).c_str()) < 0) {
+        if (std::rename(output_path.c_str(), (output_path + std::to_string(std::time(nullptr))).c_str()) < 0) {
             std::cerr << "Failed to rename: " << strerror(errno) << std::endl;
             exit(1);
         }
     }
 
-    std::ofstream out_file(file_path, std::ios::out | std::ios::binary);
+    std::cout << "FILE" << output_path << std::endl;
+    std::ofstream out_file(output_path.c_str(), std::ios::binary);
     if (!out_file.is_open()) {
         std::cerr << "Unable to open output file" << std::endl;
         exit(1);
     }
+
+    // HEADER
+    out_file.write("RESULT\0\0", 8);
+    out_file.write(reinterpret_cast<char *>(&(this->points_node->file_id)), sizeof(this->points_node->file_id));
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->file_id)), sizeof(this->query_node->file_id));
+    out_file.write(random_id, sizeof(random_id));
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->queries)), sizeof(this->query_node->queries));
+    out_file.write(reinterpret_cast<char *>(&(this->points_node->dimensions)), sizeof(this->points_node->dimensions));
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->neighbors)), sizeof(this->query_node->neighbors));
+
+    // BODY
+    for (const auto &test_point : getQueries()) {
+        auto result = getNearestNeighbor(test_point);
+        for (auto dim : result) {
+            out_file.write(reinterpret_cast<char *>(&dim), sizeof(dim));
+        }
+    }
+
+    out_file.close();
+    return output_path;
 }
 
-bool KNearestNeighbors::fileExists(std::string file_path)
+bool KNearestNeighbors::fileExists(const char *file_path)
 {
-    std::ifstream file(file_path.c_str());
+    std::ifstream file(file_path);
     return static_cast<bool>(file);
 }
 
@@ -184,4 +212,19 @@ void KNearestNeighbors::createTree()
 std::vector<float> KNearestNeighbors::getNearestNeighbor(std::vector<float> input)
 {
     return tree->getNearestNeighbor(std::move(input));
+}
+
+unsigned int KNearestNeighbors::getRandomData()
+{
+    union
+    {
+        unsigned int value;
+        char cs[sizeof(unsigned int)];
+    } u{};
+
+    std::ifstream random_file("/dev/urandom", O_RDONLY);
+    random_file.read(u.cs, sizeof(u.cs));
+    random_file.close();
+
+    return u.value;
 }
