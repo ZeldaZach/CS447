@@ -13,11 +13,13 @@ KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(buildTree(std
 
 KDTree::~KDTree()
 {
-    while (root_node != nullptr) {
+    // deleteNode(root_node, root_node->point, 0);
+
+    /*while (root_node != nullptr) {
         deleteNode(root_node, root_node->point, 0);
     }
 
-    delete root_node;
+    delete root_node;*/
 }
 
 std::vector<float> KDTree::getNearestNeighbor(std::vector<float> input)
@@ -163,11 +165,8 @@ KDTree::Node *KDTree::findMinimum(KDTree::Node *root, unsigned long dimension, u
     Node *min_lower = findMinimum(root->lower_child, dimension, depth + 1);
     Node *min_higher = findMinimum(root->higher_child, dimension, depth + 1);
 
-    if (!min_lower) {
-        return min_higher;
-    } else if (!min_higher) {
-        return min_lower;
-    }
+    std::cout << "Min lower is: " << min_lower << std::endl;
+    std::cout << "Min higher is: " << min_higher << std::endl;
 
     for (unsigned long i = 0; i < root->point.size(); i++) {
         if (min_lower->point.at(i) < min_higher->point.at(i)) {

@@ -48,6 +48,6 @@ int main(int argc, char **argv)
     */
 
     // Generate and output results
-    // std::string output_file = knn.generateAndWriteResults(argv[3]);
-    // knn.readFile(const_cast<char *>(output_file.c_str()));
+    std::string output_file = knn.generateAndWriteResults(argv[3]);
+    knn.readFile(const_cast<char *>(output_file.c_str()));
 }
