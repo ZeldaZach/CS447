@@ -37,15 +37,35 @@ int main(int argc, char **argv)
         std::cout << std::endl;
     }*/
 
-    std::cout << "\nCLOSEST POINT TO 0.0" << std::endl;
     // Create tree and test
     knn.create_tree();
-    std::vector<float> test_float({100.0, 27.0});
-    auto result = knn.getNearestNeighbor(test_float);
-    for (float &i : result) {
-        std::cout << std::setw(15) << i;
+
+    std::vector<std::vector<float>> test_points({{880.0, -350.0}, {0, 0}, {-1000, -500}});
+
+    for (const auto &test_point : test_points) {
+        auto result = knn.getNearestNeighbor(test_point);
+
+        std::cout << "Test Point:";
+        for (float i : test_point) {
+            std::cout << std::setw(15) << i;
+        }
+        std::cout << std::endl;
+
+        std::cout << "Closest Point:";
+        for (float i : result) {
+            std::cout << std::setw(15) << i;
+        }
+        std::cout << std::endl;
     }
-    std::cout << std::endl;
+
+    /*
+    Test Point:            880           -350
+    Closest Point:         884.06       -363.149
+    Test Point:              0              0
+    Closest Point:        100.213        27.4071
+    Test Point:          -1000           -500
+    Closest Point:       -911.686       -619.303
+     */
 
     // knn.writeResults(argv[3]);
 }

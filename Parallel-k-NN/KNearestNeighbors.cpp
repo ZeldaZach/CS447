@@ -10,13 +10,11 @@
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <string.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <utility>
-#include <vector>
 
 KNearestNeighbors::KNearestNeighbors() : tree(nullptr)
 {
@@ -185,5 +183,5 @@ void KNearestNeighbors::create_tree()
 
 std::vector<float> KNearestNeighbors::getNearestNeighbor(std::vector<float> input)
 {
-    return tree->getNearestNeighbor(input)->point;
+    return tree->getNearestNeighbor(input);
 }

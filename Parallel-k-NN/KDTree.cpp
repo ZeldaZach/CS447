@@ -5,29 +5,32 @@
 #include "KDTree.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 
-KDTree::KDTree(std::vector<std::vector<float>> points)
+KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(build_tree(std::move(points), 0))
 {
-    root_node = treeify(std::move(points), 0);
 }
 
-KDTree::~KDTree() = default;
+KDTree::~KDTree()
+{
+    delete root_node;
+}
 
 KDTree::KDNode::KDNode(std::vector<float> p, KDTree::KDNode *lc, KDTree::KDNode *hc)
     : point(std::move(p)), lower_child(lc), higher_child(hc)
 {
 }
 
-KDTree::KDNode *KDTree::treeify(std::vector<std::vector<float>> points, unsigned long depth)
+KDTree::KDNode *KDTree::build_tree(std::vector<std::vector<float>> points, unsigned long depth)
 {
     if (points.empty()) {
         return nullptr;
     }
 
-    // Which axis to treeify on
-    depth = depth % points.at(0).size();
+    // Which axis to build tree on
+    depth %= points.at(0).size();
 
-    // Sort the points
+    // Sort the points based on current axis
     std::sort(points.begin(), points.end(),
               [=](const std::vector<float> &v1, const std::vector<float> &v2) { return v1.at(depth) < v2.at(depth); });
 
@@ -35,63 +38,54 @@ KDTree::KDNode *KDTree::treeify(std::vector<std::vector<float>> points, unsigned
     size_t middle_index = points.size() / 2;
     auto selected_point = points.at(middle_index);
 
-    std::vector<std::vector<float>> lower_than_points(points.begin(), points.begin() + middle_index);
-    std::vector<std::vector<float>> greater_than_points(points.begin() + middle_index + 1, points.end());
+    std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
+    std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
-    return new KDNode(selected_point, treeify(lower_than_points, depth + 1), treeify(greater_than_points, depth + 1));
+    return new KDNode(selected_point, build_tree(lower_points, depth + 1), build_tree(higher_points, depth + 1));
 }
 
-KDTree::KDNode *KDTree::getNearestNeighbor(std::vector<float> input)
+std::vector<float> KDTree::getNearestNeighbor(std::vector<float> input)
 {
     KDTree::KDNode *input_node = new KDTree::KDNode(std::move(input), nullptr, nullptr);
-
-    auto root = getRoot();
-    root->e_distance = getEuclidianDistance(root->point, input_node->point);
-
-    auto result = getNearestNeighbor(input_node, root, root, 0);
+    auto result = getNearestNeighbor(input_node, getRoot(), getRoot(), 0);
 
     delete input_node;
-    return result;
+    return result->point;
 }
 
 KDTree::KDNode *
 KDTree::getNearestNeighbor(KDTree::KDNode *input, KDTree::KDNode *root, KDTree::KDNode *best, unsigned long depth)
 {
+    // End of tree
     if (!root) {
         return best;
     }
 
-    auto new_e_distance = getEuclidianDistance(root->point, input->point);
-    if (new_e_distance < best->e_distance) {
-        // Reset old best
-        best->e_distance = 0;
+    // Cycle of dimensions
+    depth %= input->point.size();
 
-        // Mark root as best
-        root->e_distance = new_e_distance;
-        best = root;
-    }
-
-    depth = depth % input->point.size();
-
-    auto lower_best = getNearestNeighbor(input, root->lower_child, best, depth + 1);
-    auto higher_best = getNearestNeighbor(input, root->higher_child, best, depth + 1);
-
-    auto lower_e_dist = getEuclidianDistance(lower_best->point, input->point);
-    auto higher_e_dist = getEuclidianDistance(higher_best->point, input->point);
-
-    if (lower_e_dist < higher_e_dist) {
-        if (best->e_distance < lower_e_dist) {
-            return best;
-        } else {
-            return lower_best;
-        }
+    // Best on the appropriate side
+    KDTree::KDNode *check_point;
+    if (input->point.at(depth) < root->point.at(depth)) {
+        check_point = getNearestNeighbor(input, root->lower_child, best, depth + 1);
     } else {
-        if (best->e_distance < higher_e_dist) {
-            return best;
-        } else {
-            return higher_best;
-        }
+        check_point = getNearestNeighbor(input, root->higher_child, best, depth + 1);
     }
+
+    // Distance between the root and the input
+    auto e_dist = euclidianDistance(root->point, input->point);
+
+    if (check_point) {
+        // Distance between "best" found point and input
+        auto checkpoint_e_dist = euclidianDistance(check_point->point, input->point);
+
+        // Return whichever one is closer
+        return checkpoint_e_dist < e_dist ? check_point : root;
+    }
+
+    // This should _never_ happen
+    std::cerr << "This should never happen: Check_point is null" << std::endl;
+    return nullptr;
 }
 
 KDTree::KDNode *KDTree::getRoot()
@@ -99,7 +93,7 @@ KDTree::KDNode *KDTree::getRoot()
     return root_node;
 }
 
-float KDTree::getEuclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
+float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
 {
     float value = 0;
     for (unsigned long i = 0; i < p1.size(); i++) {

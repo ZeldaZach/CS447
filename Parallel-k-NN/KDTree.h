@@ -10,23 +10,22 @@
 class KDTree
 {
 public:
+    explicit KDTree(std::vector<std::vector<float>>);
+    ~KDTree();
+    std::vector<float> getNearestNeighbor(std::vector<float>);
+
+private:
     struct KDNode
     {
         explicit KDNode(std::vector<float>, KDNode *, KDNode *);
         std::vector<float> point;
         KDNode *lower_child, *higher_child;
-        float e_distance;
     };
 
-    explicit KDTree(std::vector<std::vector<float>>);
-    ~KDTree();
-    KDTree::KDNode *treeify(std::vector<std::vector<float>>, unsigned long);
-
+    KDTree::KDNode *build_tree(std::vector<std::vector<float>>, unsigned long);
     KDNode *getRoot();
-    KDNode *getNearestNeighbor(std::vector<float>);
     KDNode *getNearestNeighbor(KDTree::KDNode *, KDTree::KDNode *, KDTree::KDNode *, unsigned long);
-
-    float getEuclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2);
+    float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
 
 private:
     KDNode *root_node;
