@@ -5,10 +5,12 @@
 #include "KDTree.h"
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <iostream>
 
 KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(buildTree(std::move(points), 0))
 {
+    postorder(root_node);
 }
 
 KDTree::~KDTree()
@@ -121,4 +123,35 @@ void KDTree::deleteTree(KDTree::Node *root)
     }
 
     delete root;
+}
+
+std::string vectorize(std::vector<float> v)
+{
+    std::string ret("(");
+
+    for (auto const &p : v) {
+        ret += std::to_string(p) + ",";
+    }
+    ret.pop_back();
+    ret += ")";
+    return ret;
+}
+
+void KDTree::postorder(Node *p, int indent)
+{
+    if (p) {
+        if (p->higher_child) {
+            postorder(p->higher_child, indent + 4);
+        }
+        if (indent) {
+            std::cout << std::setw(indent) << ' ';
+        }
+        if (p->higher_child)
+            std::cout << " /\n" << std::setw(indent) << ' ';
+        std::cout << vectorize(p->point) << "\n ";
+        if (p->lower_child) {
+            std::cout << std::setw(indent) << ' ' << " \\\n";
+            postorder(p->lower_child, indent + 4);
+        }
+    }
 }

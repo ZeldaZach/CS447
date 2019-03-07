@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <utility>
 
-KNearestNeighbors::KNearestNeighbors() : tree(nullptr)
+KNearestNeighbors::KNearestNeighbors() : tree(nullptr), points_node(nullptr), query_node(nullptr)
 {
 }
 
@@ -72,17 +72,17 @@ void KNearestNeighbors::readFile(char *file_path)
     Reader reader{file_mem + 8};
 
     if (file_type == "TRAINING") {
-        uint64_t id;
-        uint64_t n_points;
-        uint64_t n_dims;
+        unsigned long id;
+        unsigned long n_points;
+        unsigned long n_dims;
 
         reader >> id >> n_points >> n_dims;
 
         // std::vector<std::vector<float>> points;
-        for (std::uint64_t i = 0; i < n_points; i++) {
+        for (unsigned long i = 0; i < n_points; i++) {
             std::vector<float> dimensions;
 
-            for (std::uint64_t j = 0; j < n_dims; j++) {
+            for (unsigned long j = 0; j < n_dims; j++) {
                 float f;
                 reader >> f;
                 dimensions.push_back(f);
@@ -96,17 +96,17 @@ void KNearestNeighbors::readFile(char *file_path)
         createTree();
 
     } else if (file_type == "QUERY") {
-        uint64_t id;
-        uint64_t n_queries;
-        uint64_t n_dims;
-        uint64_t n_neighbors;
+        unsigned long id;
+        unsigned long n_queries;
+        unsigned long n_dims;
+        unsigned long n_neighbors;
 
         reader >> id >> n_queries >> n_dims >> n_neighbors;
 
-        for (std::uint64_t i = 0; i < n_queries; i++) {
+        for (unsigned long i = 0; i < n_queries; i++) {
             std::vector<float> dimensions;
 
-            for (std::uint64_t j = 0; j < n_dims; j++) {
+            for (unsigned long j = 0; j < n_dims; j++) {
                 float f;
                 reader >> f;
                 dimensions.push_back(f);
@@ -119,30 +119,30 @@ void KNearestNeighbors::readFile(char *file_path)
 
     } else if (file_type == "RESULT") {
 
-        uint64_t training_id;
-        uint64_t query_id;
-        uint64_t result_id;
-        uint64_t n_queries;
-        uint64_t n_dims;
-        uint64_t n_neighbors;
+        unsigned long training_id;
+        unsigned long query_id;
+        unsigned long result_id;
+        unsigned long n_queries;
+        unsigned long n_dims;
+        unsigned long n_neighbors;
 
-        reader >> training_id; // >> query_id >> result_id >> n_queries >> n_dims >> n_neighbors;
+        reader >> training_id >> query_id >> result_id >> n_queries >> n_dims >> n_neighbors;
 
-        std::cout << pref << "Training file ID: " << std::hex << std::setw(16) << std::setfill('0') << training_id
-                  << std::dec << std::endl;
+        std::cout << pref << "Training file ID: " << std::setw(16) << std::setfill('0') << training_id << std::dec
+                  << std::endl;
 
-        /* std::cout << pref << "Query file ID: " << std::hex << std::setw(16) << std::setfill('0') << query_id <<
-         std::dec
-                   << std::endl;
-         std::cout << pref << "Result file ID: " << std::hex << std::setw(16) << std::setfill('0') << result_id
-                   << std::dec << std::endl;
-         std::cout << pref << "Number of queries: " << n_queries << std::endl;
-         std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
-         std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;*/
+        std::cout << pref << "Query file ID: " << std::setw(16) << std::setfill('0') << query_id << std::dec
+                  << std::endl;
+        std::cout << pref << "Result file ID: " << std::setw(16) << std::setfill('0') << result_id << std::dec
+                  << std::endl;
+
+        std::cout << pref << "Number of queries: " << n_queries << std::endl;
+        std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
+        std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;
         return;
-        for (std::uint64_t i = 0; i < n_queries; i++) {
+        for (unsigned long i = 0; i < n_queries; i++) {
             std::cout << pref << "Result " << i << ": ";
-            for (std::uint64_t j = 0; j < n_dims; j++) {
+            for (unsigned long j = 0; j < n_dims; j++) {
                 float f;
                 reader >> f;
                 std::cout << std::fixed << std::setprecision(6) << std::setw(15) << std::setfill(' ') << f;
@@ -153,7 +153,6 @@ void KNearestNeighbors::readFile(char *file_path)
             }
             std::cout << std::endl;
         }
-
     } else {
         std::cerr << "Unknown file type: " << file_type << std::endl;
         exit(2);
@@ -165,9 +164,9 @@ void KNearestNeighbors::readFile(char *file_path)
 
 std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
 {
-    const char *random_id = std::to_string(getRandomData()).c_str();
+    unsigned long random_id = getRandomData();
 
-    std::string output_path = std::string(file_path) + "_" + std::string(random_id) + ".dat";
+    std::string output_path = std::string(file_path) + "_" + std::to_string(random_id) + ".dat";
 
     if (fileExists(output_path.c_str())) {
         std::cerr << "Output file exists, renaming it" << std::endl;
@@ -177,33 +176,23 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
         }
     }
 
-    std::cout << "FILE" << output_path << std::endl;
+    std::cout << "FILE: " << output_path << std::endl;
     std::ofstream out_file(output_path.c_str(), std::ios::binary);
     if (!out_file.is_open()) {
         std::cerr << "Unable to open output file" << std::endl;
         exit(1);
     }
 
+    std::cout << random_id << std::endl;
+
     // HEADER
-
-    std::cout << "FILE_ID (int): " << this->points_node->file_id << "\n"
-              << "FILE_ID (char*): "
-              << *reinterpret_cast<int *>(reinterpret_cast<char *>(&(this->points_node->file_id))) << "\n"
-              << "SIZE (int): " << sizeof(this->points_node->file_id) << "\n"
-              << "SIZE (char*): " << sizeof(reinterpret_cast<char *>(&(this->points_node->file_id))) << std::endl;
-
     out_file.write("RESULT\0\0", 8);
     out_file.write(reinterpret_cast<char *>(&(this->points_node->file_id)), 8);
-
-    /*out_file.write(reinterpret_cast<char *>(&(this->query_node->file_id)),
-                   sizeof(reinterpret_cast<char *>(&(this->query_node->file_id))));
-    out_file.write(random_id, sizeof(random_id));
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->queries)),
-                   sizeof(reinterpret_cast<char *>(&(this->query_node->queries))));
-    out_file.write(reinterpret_cast<char *>(&(this->points_node->dimensions)),
-                   sizeof(reinterpret_cast<char *>(&(this->points_node->dimensions))));
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->neighbors)),
-                   sizeof(reinterpret_cast<char *>(&(this->query_node->neighbors))));*/
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->file_id)), 8);
+    out_file.write(reinterpret_cast<char *>(&random_id), 8);
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->queries)), 8);
+    out_file.write(reinterpret_cast<char *>(&(this->points_node->dimensions)), 8);
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->neighbors)), 8);
 
     // BODY
     for (const auto &test_point : getQueries()) {
@@ -235,15 +224,10 @@ std::vector<float> KNearestNeighbors::getNearestNeighbor(std::vector<float> inpu
 
 unsigned int KNearestNeighbors::getRandomData()
 {
-    union
-    {
-        unsigned int value;
-        char cs[sizeof(unsigned int)];
-    } u{};
+    unsigned char buffer[8];
+    int fd = open("/dev/urandom", O_RDONLY);
+    read(fd, buffer, 8);
+    close(fd);
 
-    std::ifstream random_file("/dev/urandom", std::ios::in);
-    random_file.read(u.cs, sizeof(u.cs));
-    random_file.close();
-
-    return u.value;
+    return *reinterpret_cast<unsigned int *>(&buffer);
 }

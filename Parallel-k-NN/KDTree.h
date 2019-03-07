@@ -22,6 +22,7 @@ public:
     ~KDTree();
     std::vector<float> getNearestNeighbor(std::vector<float>);
     Node *getRoot();
+    void postorder(Node *p, int indent = 0);
 
 private:
     KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);

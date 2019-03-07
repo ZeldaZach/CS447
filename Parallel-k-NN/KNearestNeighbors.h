@@ -62,42 +62,42 @@ private:
 
     struct Node
     {
-        Node(std::string ft, uint64_t fid) : file_type(std::move(ft)), file_id(fid)
+        Node(std::string ft, unsigned long fid) : file_type(std::move(ft)), file_id(fid)
         {
         }
 
         std::string file_type;
-        uint64_t file_id;
+        unsigned long file_id;
     };
 
     struct TrainingNode : public Node
     {
-        TrainingNode(std::string ft, uint64_t fid, uint64_t p, uint64_t d)
+        TrainingNode(std::string ft, unsigned long fid, unsigned long p, unsigned long d)
             : Node(std::move(ft), fid), points(p), dimensions(d)
         {
         }
 
-        uint64_t points;
-        uint64_t dimensions;
+        unsigned long points;
+        unsigned long dimensions;
     };
 
     struct QueryNode : public Node
     {
-        QueryNode(std::string ft, uint64_t fid, uint64_t q, uint64_t n)
+        QueryNode(std::string ft, unsigned long fid, unsigned long q, unsigned long n)
             : Node(std::move(ft), fid), queries(q), neighbors(n)
         {
         }
 
-        uint64_t queries;
-        uint64_t neighbors;
+        unsigned long queries;
+        unsigned long neighbors;
     };
 
 private:
     std::vector<std::vector<float>> points;
     std::vector<std::vector<float>> queries;
+    KDTree *tree;
     TrainingNode *points_node;
     QueryNode *query_node;
-    KDTree *tree;
 };
 
 #endif // PARALLEL_K_NN_KNEARESTNEIGHBORS_H
