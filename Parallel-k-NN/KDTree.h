@@ -9,11 +9,6 @@
 
 class KDTree
 {
-public:
-    explicit KDTree(std::vector<std::vector<float>>);
-    ~KDTree();
-    std::vector<float> getNearestNeighbor(std::vector<float>);
-
 private:
     struct Node
     {
@@ -22,14 +17,19 @@ private:
         Node *lower_child, *higher_child;
     };
 
-    KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
+public:
+    explicit KDTree(std::vector<std::vector<float>>);
+    ~KDTree();
+    std::vector<float> getNearestNeighbor(std::vector<float>);
     Node *getRoot();
+
+private:
+    KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
+
     Node *getNearestNeighbor(KDTree::Node *, KDTree::Node *, KDTree::Node *, unsigned long);
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
 
-    Node *deleteNode(Node *root, std::vector<float> point, unsigned long depth);
-    Node *findMinimum(Node *root, unsigned long depth);
-    Node *findMinimum(Node *root, unsigned long dimension, unsigned long depth);
+    Node *deleteTree(Node *root);
 
 private:
     Node *root_node;

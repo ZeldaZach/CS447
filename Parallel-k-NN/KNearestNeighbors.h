@@ -6,10 +6,10 @@
 #define PARALLEL_K_NN_KNEARESTNEIGHBORS_H
 
 #include "KDTree.h"
-#include <string>
-#include <vector>
 #include <assert.h>
 #include <cstring>
+#include <string>
+#include <vector>
 
 class KNearestNeighbors
 {
@@ -28,6 +28,11 @@ public:
     inline std::vector<std::vector<float>> getQueries() const
     {
         return queries;
+    }
+
+    KDTree *getTree()
+    {
+        return tree;
     }
 
 private:
