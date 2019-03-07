@@ -4,14 +4,12 @@
 
 #include "KNearestNeighbors.h"
 #include "KDTree.h"
-#include <ctime>
 #include <fcntl.h>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <unistd.h>
 #include <utility>
 
