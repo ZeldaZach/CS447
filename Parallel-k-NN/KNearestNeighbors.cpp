@@ -20,7 +20,12 @@ KNearestNeighbors::KNearestNeighbors() : tree(nullptr)
 {
 }
 
-KNearestNeighbors::~KNearestNeighbors() = default;
+KNearestNeighbors::~KNearestNeighbors()
+{
+    delete points_node;
+    delete query_node;
+    delete tree;
+}
 
 void KNearestNeighbors::readFile(char *file_path)
 {
