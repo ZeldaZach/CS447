@@ -126,17 +126,19 @@ void KNearestNeighbors::readFile(char *file_path)
         uint64_t n_dims;
         uint64_t n_neighbors;
 
-        reader >> training_id >> query_id >> result_id >> n_queries >> n_dims >> n_neighbors;
+        reader >> training_id; // >> query_id >> result_id >> n_queries >> n_dims >> n_neighbors;
 
         std::cout << pref << "Training file ID: " << std::hex << std::setw(16) << std::setfill('0') << training_id
                   << std::dec << std::endl;
-        std::cout << pref << "Query file ID: " << std::hex << std::setw(16) << std::setfill('0') << query_id << std::dec
-                  << std::endl;
-        std::cout << pref << "Result file ID: " << std::hex << std::setw(16) << std::setfill('0') << result_id
-                  << std::dec << std::endl;
-        std::cout << pref << "Number of queries: " << n_queries << std::endl;
-        std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
-        std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;
+
+        /* std::cout << pref << "Query file ID: " << std::hex << std::setw(16) << std::setfill('0') << query_id <<
+         std::dec
+                   << std::endl;
+         std::cout << pref << "Result file ID: " << std::hex << std::setw(16) << std::setfill('0') << result_id
+                   << std::dec << std::endl;
+         std::cout << pref << "Number of queries: " << n_queries << std::endl;
+         std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
+         std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;*/
         return;
         for (std::uint64_t i = 0; i < n_queries; i++) {
             std::cout << pref << "Result " << i << ": ";
@@ -183,13 +185,25 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
     }
 
     // HEADER
+
+    std::cout << "FILE_ID (int): " << this->points_node->file_id << "\n"
+              << "FILE_ID (char*): "
+              << *reinterpret_cast<int *>(reinterpret_cast<char *>(&(this->points_node->file_id))) << "\n"
+              << "SIZE (int): " << sizeof(this->points_node->file_id) << "\n"
+              << "SIZE (char*): " << sizeof(reinterpret_cast<char *>(&(this->points_node->file_id))) << std::endl;
+
     out_file.write("RESULT\0\0", 8);
-    out_file.write(reinterpret_cast<char *>(&(this->points_node->file_id)), sizeof(this->points_node->file_id));
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->file_id)), sizeof(this->query_node->file_id));
+    out_file.write(reinterpret_cast<char *>(&(this->points_node->file_id)), 8);
+
+    /*out_file.write(reinterpret_cast<char *>(&(this->query_node->file_id)),
+                   sizeof(reinterpret_cast<char *>(&(this->query_node->file_id))));
     out_file.write(random_id, sizeof(random_id));
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->queries)), sizeof(this->query_node->queries));
-    out_file.write(reinterpret_cast<char *>(&(this->points_node->dimensions)), sizeof(this->points_node->dimensions));
-    out_file.write(reinterpret_cast<char *>(&(this->query_node->neighbors)), sizeof(this->query_node->neighbors));
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->queries)),
+                   sizeof(reinterpret_cast<char *>(&(this->query_node->queries))));
+    out_file.write(reinterpret_cast<char *>(&(this->points_node->dimensions)),
+                   sizeof(reinterpret_cast<char *>(&(this->points_node->dimensions))));
+    out_file.write(reinterpret_cast<char *>(&(this->query_node->neighbors)),
+                   sizeof(reinterpret_cast<char *>(&(this->query_node->neighbors))));*/
 
     // BODY
     for (const auto &test_point : getQueries()) {

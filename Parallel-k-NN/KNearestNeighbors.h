@@ -62,34 +62,34 @@ private:
 
     struct Node
     {
-        Node(std::string ft, uint64_t fid) : file_type(std::move(ft)), file_id(static_cast<int>(fid))
+        Node(std::string ft, uint64_t fid) : file_type(std::move(ft)), file_id(fid)
         {
         }
 
         std::string file_type;
-        int file_id;
+        uint64_t file_id;
     };
 
     struct TrainingNode : public Node
     {
         TrainingNode(std::string ft, uint64_t fid, uint64_t p, uint64_t d)
-            : Node(std::move(ft), fid), points(static_cast<int>(p)), dimensions(static_cast<int>(d))
+            : Node(std::move(ft), fid), points(p), dimensions(d)
         {
         }
 
-        int points;
-        int dimensions;
+        uint64_t points;
+        uint64_t dimensions;
     };
 
     struct QueryNode : public Node
     {
         QueryNode(std::string ft, uint64_t fid, uint64_t q, uint64_t n)
-            : Node(std::move(ft), fid), queries(static_cast<int>(q)), neighbors(static_cast<int>(n))
+            : Node(std::move(ft), fid), queries(q), neighbors(n)
         {
         }
 
-        int queries;
-        int neighbors;
+        uint64_t queries;
+        uint64_t neighbors;
     };
 
 private:
