@@ -15,19 +15,19 @@ public:
     std::vector<float> getNearestNeighbor(std::vector<float>);
 
 private:
-    struct KDNode
+    struct Node
     {
-        explicit KDNode(std::vector<float>, KDNode *, KDNode *);
+        explicit Node(std::vector<float>, Node *, Node *);
         std::vector<float> point;
-        KDNode *lower_child, *higher_child;
+        Node *lower_child, *higher_child;
     };
 
-    KDTree::KDNode *build_tree(std::vector<std::vector<float>>, unsigned long);
-    KDNode *getRoot();
-    KDNode *getNearestNeighbor(KDTree::KDNode *, KDTree::KDNode *, KDTree::KDNode *, unsigned long);
+    KDTree::Node *build_tree(std::vector<std::vector<float>>, unsigned long);
+    Node *getRoot();
+    Node *getNearestNeighbor(KDTree::Node *, KDTree::Node *, KDTree::Node *, unsigned long);
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
 
 private:
-    KDNode *root_node;
+    Node *root_node;
 };
 #endif // PARALLEL_K_NN_KDTREE_H

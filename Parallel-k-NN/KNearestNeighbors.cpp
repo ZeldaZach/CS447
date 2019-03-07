@@ -183,5 +183,5 @@ void KNearestNeighbors::create_tree()
 
 std::vector<float> KNearestNeighbors::getNearestNeighbor(std::vector<float> input)
 {
-    return tree->getNearestNeighbor(input);
+    return tree->getNearestNeighbor(std::move(input));
 }
