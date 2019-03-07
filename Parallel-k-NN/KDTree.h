@@ -27,6 +27,10 @@ private:
     Node *getNearestNeighbor(KDTree::Node *, KDTree::Node *, KDTree::Node *, unsigned long);
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
 
+    Node *deleteNode(Node *root, std::vector<float> point, unsigned long depth);
+    Node *findMinimum(Node *root, unsigned long depth);
+    Node *findMinimum(Node *root, unsigned long dimension, unsigned long depth);
+
 private:
     Node *root_node;
 };

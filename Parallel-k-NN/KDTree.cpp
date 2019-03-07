@@ -13,6 +13,10 @@ KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(buildTree(std
 
 KDTree::~KDTree()
 {
+    while (root_node != nullptr) {
+        deleteNode(root_node, root_node->point, 0);
+    }
+
     delete root_node;
 }
 
@@ -101,4 +105,73 @@ float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<
     }
 
     return std::sqrt(value);
+}
+
+KDTree::Node *KDTree::deleteNode(KDTree::Node *root, std::vector<float> point, unsigned long depth)
+{
+    if (!root) {
+        return nullptr;
+    }
+
+    depth %= depth % point.size();
+
+    if (root->point == point) {
+        if (root->higher_child) {
+            Node *minimum_node = findMinimum(root->higher_child, depth);
+            root->point = minimum_node->point;
+            root->higher_child = deleteNode(root->higher_child, minimum_node->point, depth + 1);
+        } else if (root->lower_child) {
+            Node *minimum_node = findMinimum(root->lower_child, depth);
+            root->point = minimum_node->point;
+            root->higher_child = deleteNode(root->lower_child, minimum_node->point, depth + 1);
+        } else {
+            delete root;
+            return nullptr;
+        }
+
+        return root;
+    } else {
+        if (root->point.at(depth) < point.at(depth)) {
+            return deleteNode(root->higher_child, point, depth + 1);
+        } else {
+            return deleteNode(root->lower_child, point, depth + 1);
+        }
+    }
+}
+
+KDTree::Node *KDTree::findMinimum(Node *root, unsigned long depth)
+{
+    return findMinimum(root, depth, 0);
+}
+
+KDTree::Node *KDTree::findMinimum(KDTree::Node *root, unsigned long dimension, unsigned long depth)
+{
+    if (!root) {
+        return nullptr;
+    }
+
+    depth %= root->point.size();
+
+    if (depth == dimension) {
+        if (!root->lower_child) {
+            return root;
+        }
+
+        return findMinimum(root->lower_child, dimension, depth + 1);
+    }
+
+    Node *min_lower = findMinimum(root->lower_child, dimension, depth + 1);
+    Node *min_higher = findMinimum(root->higher_child, dimension, depth + 1);
+
+    for (unsigned long i = 0; i < min_lower->point.size(); i++) {
+        if (min_lower->point.at(i) < min_higher->point.at(i)) {
+            return min_lower;
+        }
+
+        if (min_lower->point.at(i) > min_higher->point.at(i)) {
+            return min_higher;
+        }
+    }
+
+    return min_lower;
 }
