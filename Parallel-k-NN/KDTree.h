@@ -29,7 +29,7 @@ private:
     Node *getNearestNeighbor(KDTree::Node *, KDTree::Node *, KDTree::Node *, unsigned long);
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
 
-    Node *deleteTree(Node *root);
+    void deleteTree(Node *root);
 
 private:
     Node *root_node;

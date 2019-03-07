@@ -104,21 +104,12 @@ float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<
 }
 
 /*
- * Another approach is to find a replacement for the point removed.
- * First, find the node R that contains the point to be removed.
- * For the base case where R is a leaf node, no replacement is required.
- * For the general case, find a replacement point, say p, from the subtree rooted at R.
- * Replace the point stored at R with p. Then, recursively remove p.
-
- * For finding a replacement point, if R discriminates on x (say) and R has a right child,
- * find the point with the minimum x value from the subtree rooted at the right child.
- * Otherwise, find the point with the maximum x value from the subtree rooted at the left child.
+ * Post Order deletion of the tree
  */
-
-KDTree::Node *KDTree::deleteTree(KDTree::Node *root)
+void KDTree::deleteTree(KDTree::Node *root)
 {
     if (!root) {
-        return nullptr;
+        return;
     }
 
     if (root->lower_child) {
@@ -130,5 +121,4 @@ KDTree::Node *KDTree::deleteTree(KDTree::Node *root)
     }
 
     delete root;
-    return nullptr;
 }
