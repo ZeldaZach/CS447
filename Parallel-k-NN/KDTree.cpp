@@ -7,7 +7,7 @@
 #include <cmath>
 #include <iostream>
 
-KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(build_tree(std::move(points), 0))
+KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(buildTree(std::move(points), 0))
 {
 }
 
@@ -30,7 +30,7 @@ KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
 {
 }
 
-KDTree::Node *KDTree::build_tree(std::vector<std::vector<float>> points, unsigned long depth)
+KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth)
 {
     if (points.empty()) {
         return nullptr;
@@ -50,7 +50,7 @@ KDTree::Node *KDTree::build_tree(std::vector<std::vector<float>> points, unsigne
     std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
     std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
-    return new Node(selected_point, build_tree(lower_points, depth + 1), build_tree(higher_points, depth + 1));
+    return new Node(selected_point, buildTree(lower_points, depth + 1), buildTree(higher_points, depth + 1));
 }
 
 KDTree::Node *KDTree::getRoot()

@@ -155,7 +155,7 @@ void KNearestNeighbors::readFile(std::string file_path)
 
 void KNearestNeighbors::writeResults(std::string file_path)
 {
-    if (file_exists(file_path)) {
+    if (fileExists(file_path)) {
         std::cerr << "Output file exists, renaming it" << std::endl;
         if (std::rename(file_path.c_str(), (file_path + std::to_string(std::time(nullptr))).c_str()) < 0) {
             std::cerr << "Failed to rename: " << strerror(errno) << std::endl;
@@ -170,13 +170,13 @@ void KNearestNeighbors::writeResults(std::string file_path)
     }
 }
 
-bool KNearestNeighbors::file_exists(std::string file_path)
+bool KNearestNeighbors::fileExists(std::string file_path)
 {
     std::ifstream file(file_path.c_str());
     return static_cast<bool>(file);
 }
 
-void KNearestNeighbors::create_tree()
+void KNearestNeighbors::createTree()
 {
     tree = new KDTree(points);
 }

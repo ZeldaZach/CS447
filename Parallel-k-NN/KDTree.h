@@ -22,7 +22,7 @@ private:
         Node *lower_child, *higher_child;
     };
 
-    KDTree::Node *build_tree(std::vector<std::vector<float>>, unsigned long);
+    KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
     Node *getRoot();
     Node *getNearestNeighbor(KDTree::Node *, KDTree::Node *, KDTree::Node *, unsigned long);
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);

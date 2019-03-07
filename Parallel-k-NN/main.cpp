@@ -38,7 +38,7 @@ int main(int argc, char **argv)
     }*/
 
     // Create tree and test
-    knn.create_tree();
+    knn.createTree();
 
     std::vector<std::vector<float>> test_points({{880.0, -350.0}, {0, 0}, {-1000, -500}});
 
