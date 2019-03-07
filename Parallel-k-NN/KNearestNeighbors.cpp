@@ -90,8 +90,6 @@ void KNearestNeighbors::readFile(char *file_path)
 
         // Create the KD-Tree of training data
         this->points_node = new TrainingNode(std::string(file_type), id, n_points, n_dims);
-        createTree();
-
     } else if (file_type == "QUERY") {
         unsigned long id;
         unsigned long n_queries;
@@ -113,9 +111,7 @@ void KNearestNeighbors::readFile(char *file_path)
         }
 
         this->query_node = new QueryNode(std::string(file_type), id, n_queries, n_neighbors);
-
     } else if (file_type == "RESULT") {
-
         unsigned long training_id;
         unsigned long query_id;
         unsigned long result_id;
@@ -136,7 +132,7 @@ void KNearestNeighbors::readFile(char *file_path)
         std::cout << pref << "Number of queries: " << n_queries << std::endl;
         std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
         std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;
-        return;
+
         for (unsigned long i = 0; i < n_queries; i++) {
             std::cout << pref << "Result " << i << ": ";
             for (unsigned long j = 0; j < n_dims; j++) {
@@ -173,14 +169,11 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
         }
     }
 
-    std::cout << "FILE: " << output_path << std::endl;
     std::ofstream out_file(output_path.c_str(), std::ios::binary);
     if (!out_file.is_open()) {
         std::cerr << "Unable to open output file" << std::endl;
         exit(1);
     }
-
-    std::cout << random_id << std::endl;
 
     // HEADER
     out_file.write("RESULT\0\0", 8);
@@ -193,9 +186,10 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
 
     // BODY
     for (const auto &test_point : getQueries()) {
-        auto result = getNearestNeighbor(test_point);
+        auto result = getNearestNeighbors(test_point);
+
         for (auto dim : result) {
-            out_file.write(reinterpret_cast<char *>(&dim), sizeof(dim));
+            out_file.write(reinterpret_cast<char *>(&dim), sizeof(reinterpret_cast<char *>(&dim)));
         }
     }
 
@@ -209,14 +203,14 @@ bool KNearestNeighbors::fileExists(const char *file_path)
     return static_cast<bool>(file);
 }
 
-void KNearestNeighbors::createTree()
+void KNearestNeighbors::generateTree()
 {
-    tree = new KDTree(points);
+    tree = new KDTree(points, query_node->neighbors);
 }
 
-std::vector<float> KNearestNeighbors::getNearestNeighbor(std::vector<float> input)
+std::vector<std::vector<float>> KNearestNeighbors::getNearestNeighbors(std::vector<float> input)
 {
-    return tree->getNearestNeighbor(std::move(input));
+    return tree->getNearestNeighbors(std::move(input));
 }
 
 unsigned int KNearestNeighbors::getRandomData()

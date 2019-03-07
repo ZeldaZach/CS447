@@ -30,6 +30,9 @@ int main(int argc, char **argv)
     // Query data
     knn.readFile(argv[2]);
 
+    // Create the tree w/ Training and query data
+    knn.generateTree();
+
     /*
     std::cout << "POINTS IN FILE" << std::endl;
     for (const auto &t : knn.getPoints()) {
@@ -37,7 +40,7 @@ int main(int argc, char **argv)
     }
 
     for (const auto &test_point : knn.getQueries()) {
-        auto result = knn.getNearestNeighbor(test_point);
+        auto result = knn.getNearestNeighbors(test_point);
 
         std::cout << "Test Point:";
         printVector(test_point);

@@ -7,11 +7,10 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
-#include <queue>
 
-KDTree::KDTree(std::vector<std::vector<float>> points) : root_node(buildTree(std::move(points), 0))
+KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors)
+    : root_node(buildTree(std::move(points), 0)), how_many_neighbors(neighbors)
 {
-    // postorder(root_node);
 }
 
 KDTree::~KDTree()
@@ -19,13 +18,26 @@ KDTree::~KDTree()
     deleteTree(root_node);
 }
 
-std::vector<float> KDTree::getNearestNeighbor(std::vector<float> input)
+std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> input)
 {
-    KDTree::Node *input_node = new KDTree::Node(std::move(input), nullptr, nullptr);
-    auto result = getNearestNeighbor(input_node, getRoot(), getRoot(), 0);
+    // Empty the queue before starting
+    while (!priority_queue.empty()) {
+        priority_queue.pop();
+    }
 
+    // Get all nearest neighbors and put them into the queue
+    KDTree::Node *input_node = new KDTree::Node(std::move(input), nullptr, nullptr);
+    getNearestNeighbors(input_node, getRoot(), 0);
     delete input_node;
-    return result->point;
+
+    std::vector<std::vector<float>> return_value;
+
+    for (unsigned int i = 0; i < how_many_neighbors && !priority_queue.empty(); i++) {
+        return_value.push_back(priority_queue.top()->point);
+        priority_queue.pop();
+    }
+
+    return return_value;
 }
 
 KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
@@ -61,13 +73,14 @@ KDTree::Node *KDTree::getRoot()
     return root_node;
 }
 
-KDTree::Node *
-KDTree::getNearestNeighbor(KDTree::Node *input, KDTree::Node *root, KDTree::Node *best, unsigned long depth)
+KDTree::Node *KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth)
 {
     // End of tree
     if (!root) {
-        return best;
+        return priority_queue.top();
     }
+
+    priority_queue.push(root);
 
     // Cycle of dimensions
     depth %= input->point.size();
@@ -75,9 +88,9 @@ KDTree::getNearestNeighbor(KDTree::Node *input, KDTree::Node *root, KDTree::Node
     // Best on the appropriate side
     KDTree::Node *check_point;
     if (input->point.at(depth) < root->point.at(depth)) {
-        check_point = getNearestNeighbor(input, root->lower_child, best, depth + 1);
+        check_point = getNearestNeighbors(input, root->lower_child, depth + 1);
     } else {
-        check_point = getNearestNeighbor(input, root->higher_child, best, depth + 1);
+        check_point = getNearestNeighbors(input, root->higher_child, depth + 1);
     }
 
     // Distance between the root and the input
@@ -92,12 +105,18 @@ KDTree::getNearestNeighbor(KDTree::Node *input, KDTree::Node *root, KDTree::Node
     }
 
     // This should _never_ happen
-    std::cerr << "This should never happen: Check_point is null" << std::endl;
+    std::cerr << "This should never happen: check_point is null" << std::endl;
     return nullptr;
 }
 
 float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
 {
+    if (p1.size() != p2.size()) {
+        std::cerr << "Invalid calling of euclidianDistance: p1.size() = " << p1.size() << ", p2.size() = " << p2.size()
+                  << std::endl;
+        exit(1);
+    }
+
     float value = 0;
     for (unsigned long i = 0; i < p1.size(); i++) {
         value += std::pow(p1.at(i) - p2.at(i), 2.0);

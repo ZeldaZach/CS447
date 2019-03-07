@@ -17,8 +17,9 @@ public:
     explicit KNearestNeighbors();
     ~KNearestNeighbors();
     void readFile(char *);
+    void generateTree();
     std::string generateAndWriteResults(char *);
-    std::vector<float> getNearestNeighbor(std::vector<float>);
+    std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
 
     inline std::vector<std::vector<float>> getPoints() const
     {
@@ -37,7 +38,6 @@ public:
 
 private:
     bool fileExists(const char *);
-    void createTree();
     unsigned int getRandomData();
 
 private:
