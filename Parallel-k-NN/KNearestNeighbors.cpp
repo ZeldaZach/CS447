@@ -173,9 +173,7 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
         std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
         for (const auto &neighbor : neighbors) {
             for (float point : neighbor) {
-                char *dim_data = reinterpret_cast<char *>(&point);
-                std::cout << *reinterpret_cast<float *>(dim_data) << "\t(" << sizeof(dim_data) << ")" << std::endl;
-                out_file.write(dim_data, 8);
+                out_file.write(reinterpret_cast<char *>(&point), 4);
             }
         }
     }
