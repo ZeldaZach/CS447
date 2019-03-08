@@ -172,10 +172,10 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
     for (const auto &query_point : getQueries()) {
         std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
         for (const auto &neighbor : neighbors) {
-            for (auto point : neighbor) {
+            for (float point : neighbor) {
                 char *dim_data = reinterpret_cast<char *>(&point);
-                out_file.write(dim_data, sizeof(dim_data));
-                std::cout << *reinterpret_cast<float *>(dim_data) << " : " << sizeof(dim_data) << std::endl;
+                std::cout << *reinterpret_cast<float *>(dim_data) << "\t(" << sizeof(dim_data) << ")" << std::endl;
+                out_file.write(dim_data, 8);
             }
         }
     }

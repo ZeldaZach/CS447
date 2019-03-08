@@ -35,8 +35,6 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
     for (unsigned int i = 0; i < how_many_neighbors && !priority_queue.empty(); i++) {
         return_value.push_back(priority_queue.top().second->point);
         priority_queue.pop();
-
-        // std::cout << vectorToString(return_value.at(i)) << std::endl;
     }
 
     return return_value;

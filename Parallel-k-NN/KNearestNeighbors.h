@@ -31,11 +31,6 @@ public:
         return queries;
     }
 
-    KDTree *getTree()
-    {
-        return tree;
-    }
-
 private:
     bool fileExists(const char *);
     unsigned int getRandomData();
