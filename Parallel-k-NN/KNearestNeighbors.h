@@ -34,6 +34,7 @@ public:
 private:
     bool fileExists(const char *);
     unsigned int getRandomData();
+    template <typename T> void binary_write(std::ostream &, const T &);
 
 private:
     class Reader

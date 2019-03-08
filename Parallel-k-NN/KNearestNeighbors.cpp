@@ -161,19 +161,19 @@ std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
 
     // HEADER
     out_file.write("RESULT\0\0", 8);
-    out_file.write(reinterpret_cast<char *>(&this->points_node->file_id), sizeof(unsigned long));
-    out_file.write(reinterpret_cast<char *>(&this->query_node->file_id), sizeof(unsigned long));
-    out_file.write(reinterpret_cast<char *>(&random_id), sizeof(unsigned long));
-    out_file.write(reinterpret_cast<char *>(&this->query_node->queries), sizeof(unsigned long));
-    out_file.write(reinterpret_cast<char *>(&this->points_node->dimensions), sizeof(unsigned long));
-    out_file.write(reinterpret_cast<char *>(&this->query_node->neighbors), sizeof(unsigned long));
+    binary_write<unsigned long>(out_file, this->points_node->file_id);
+    binary_write<unsigned long>(out_file, this->query_node->file_id);
+    binary_write<unsigned long>(out_file, random_id);
+    binary_write<unsigned long>(out_file, this->query_node->queries);
+    binary_write<unsigned long>(out_file, this->points_node->dimensions);
+    binary_write<unsigned long>(out_file, this->query_node->neighbors);
 
     // BODY
     for (const auto &query_point : getQueries()) {
         std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
         for (const auto &neighbor : neighbors) {
             for (float point : neighbor) {
-                out_file.write(reinterpret_cast<char *>(&point), sizeof(float));
+                binary_write<float>(out_file, point);
             }
         }
     }
@@ -206,4 +206,9 @@ unsigned int KNearestNeighbors::getRandomData()
     close(fd);
 
     return *reinterpret_cast<unsigned int *>(&buffer);
+}
+
+template <typename T> void KNearestNeighbors::binary_write(std::ostream &os, const T &v)
+{
+    os.write(reinterpret_cast<const char *>(&v), sizeof(v));
 }

@@ -26,11 +26,8 @@ public:
 
 private:
     KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
-
     void getNearestNeighbors(KDTree::Node *, KDTree::Node *, unsigned long);
-
-    float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
-
+    template <typename T = float> float euclidianDistance(const std::vector<T> &, const std::vector<T> &);
     void deleteTree(Node *root);
     static std::string vectorToString(const std::vector<float> &);
 

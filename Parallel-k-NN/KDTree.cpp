@@ -75,35 +75,50 @@ KDTree::Node *KDTree::getRoot()
 
 void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth)
 {
-    // End of tree
     if (!root) {
         return;
     }
 
-    // Distance between the root and the input
+    // Cycle of dimensions
+    depth %= input->point.size();
+
+    if (priority_queue.size() >= how_many_neighbors) {
+        // Remove the best K nodes from the priority queue
+        std::vector<std::pair<float, Node *>> holder;
+        for (unsigned long i = 0; i < how_many_neighbors; i++) {
+            holder.push_back(priority_queue.top());
+            priority_queue.pop();
+        }
+
+        // The next best, which is K+1
+        auto last_best = priority_queue.top();
+
+        // Return the nodes
+        for (const auto &pq : holder) {
+            priority_queue.push(pq);
+        }
+
+        // If our perp distance is worse than the K+1, we can safely discard this plus all children
+        auto dist = std::pow(input->point.at(depth) - root->point.at(depth), 2.0);
+        if (dist > last_best.first) {
+            return;
+        }
+    }
+
     auto e_dist = euclidianDistance(root->point, input->point);
     std::cout << "Adding " << vectorToString(root->point) << std::endl;
     priority_queue.push(std::make_pair<>(e_dist, root));
 
-    // Cycle of dimensions
-    depth %= input->point.size();
-
-    getNearestNeighbors(input, root->lower_child, depth + 1);
-    getNearestNeighbors(input, root->higher_child, depth + 1);
-
-    /*
     if (input->point.at(depth) < root->point.at(depth)) {
         getNearestNeighbors(input, root->lower_child, depth + 1);
-    } else if (input->point.at(depth) > root->point.at(depth)) {
         getNearestNeighbors(input, root->higher_child, depth + 1);
     } else {
-        getNearestNeighbors(input, root->lower_child, depth + 1);
         getNearestNeighbors(input, root->higher_child, depth + 1);
+        getNearestNeighbors(input, root->lower_child, depth + 1);
     }
-     */
 }
 
-float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
+template <typename T> float KDTree::euclidianDistance(const std::vector<T> &p1, const std::vector<T> &p2)
 {
     if (p1.size() != p2.size()) {
         std::cerr << "Invalid calling of euclidianDistance: p1.size() = " << p1.size() << ", p2.size() = " << p2.size()
@@ -116,7 +131,8 @@ float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<
         value += std::pow(p1.at(i) - p2.at(i), 2.0);
     }
 
-    return std::sqrt(value);
+    // return std::sqrt(value);
+    return value;
 }
 
 /*
