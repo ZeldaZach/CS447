@@ -27,7 +27,7 @@ public:
 private:
     KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
 
-    Node *getNearestNeighbors(KDTree::Node *, KDTree::Node *, unsigned long);
+    void getNearestNeighbors(KDTree::Node *, KDTree::Node *, unsigned long);
 
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
 

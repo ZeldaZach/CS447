@@ -20,11 +20,6 @@ KDTree::~KDTree()
 
 std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> input)
 {
-    // Empty the queue before starting
-    while (!priority_queue.empty()) {
-        priority_queue.pop();
-    }
-
     // Get all nearest neighbors and put them into the queue
     KDTree::Node *input_node = new KDTree::Node(std::move(input), nullptr, nullptr);
     getNearestNeighbors(input_node, getRoot(), 0);
@@ -37,6 +32,11 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
         priority_queue.pop();
     }
 
+    while (!priority_queue.empty()) {
+        priority_queue.pop();
+    }
+
+    std::cout << "End" << std::endl;
     return return_value;
 }
 
@@ -73,39 +73,34 @@ KDTree::Node *KDTree::getRoot()
     return root_node;
 }
 
-KDTree::Node *KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth)
+void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth)
 {
     // End of tree
     if (!root) {
-        return priority_queue.top().second;
+        return;
     }
 
     // Distance between the root and the input
     auto e_dist = euclidianDistance(root->point, input->point);
+    std::cout << "Adding " << vectorToString(root->point) << std::endl;
     priority_queue.push(std::make_pair<>(e_dist, root));
 
     // Cycle of dimensions
     depth %= input->point.size();
 
-    // Best on the appropriate side
-    KDTree::Node *check_point;
+    getNearestNeighbors(input, root->lower_child, depth + 1);
+    getNearestNeighbors(input, root->higher_child, depth + 1);
+
+    /*
     if (input->point.at(depth) < root->point.at(depth)) {
-        check_point = getNearestNeighbors(input, root->lower_child, depth + 1);
+        getNearestNeighbors(input, root->lower_child, depth + 1);
+    } else if (input->point.at(depth) > root->point.at(depth)) {
+        getNearestNeighbors(input, root->higher_child, depth + 1);
     } else {
-        check_point = getNearestNeighbors(input, root->higher_child, depth + 1);
+        getNearestNeighbors(input, root->lower_child, depth + 1);
+        getNearestNeighbors(input, root->higher_child, depth + 1);
     }
-
-    if (check_point) {
-        // Distance between "best" found point and input
-        auto checkpoint_e_dist = euclidianDistance(check_point->point, input->point);
-
-        // Return whichever one is closer
-        return checkpoint_e_dist < e_dist ? check_point : root;
-    }
-
-    // This should _never_ happen
-    std::cerr << "This should never happen: check_point is null" << std::endl;
-    return nullptr;
+     */
 }
 
 float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
