@@ -184,6 +184,7 @@ std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
     binary_write<unsigned long>(out_file, this->query_node->neighbors);
 
     // BODY
+    auto begin = std::chrono::steady_clock::now();
     for (const auto &query_point : getQueries()) {
         std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
         for (const auto &neighbor : neighbors) {
@@ -192,6 +193,9 @@ std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
             }
         }
     }
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "Time to execute queries:\t"
+              << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
 
     out_file.close();
     return output_path;

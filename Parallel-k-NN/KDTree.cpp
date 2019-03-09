@@ -9,8 +9,14 @@
 #include <iostream>
 
 KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors)
-    : root_node(buildTree(std::move(points), 0)), how_many_neighbors(neighbors)
+    : root_node(nullptr), how_many_neighbors(neighbors)
 {
+    auto begin = std::chrono::steady_clock::now();
+    root_node = buildTree(std::move(points), 0);
+    auto end = std::chrono::steady_clock::now();
+
+    std::cout << "Time to build tree:\t\t\t"
+              << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
 }
 
 KDTree::~KDTree()
@@ -47,6 +53,7 @@ KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
 
 KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth)
 {
+
     if (points.empty()) {
         return nullptr;
     }
