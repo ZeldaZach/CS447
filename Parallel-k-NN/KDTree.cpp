@@ -36,7 +36,7 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
         priority_queue.pop();
     }
 
-    std::cout << "End" << std::endl;
+    // std::cout << "End" << std::endl;
     return return_value;
 }
 
