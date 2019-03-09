@@ -75,6 +75,7 @@ KDTree::Node *KDTree::getRoot()
 
 void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth)
 {
+    // If tree not found
     if (!root) {
         return;
     }
@@ -82,32 +83,27 @@ void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsign
     // Cycle of dimensions
     depth %= input->point.size();
 
-    if (priority_queue.size() >= how_many_neighbors) {
-        // Remove the best K nodes from the priority queue
-        std::vector<std::pair<float, Node *>> holder;
-        for (unsigned long i = 0; i < how_many_neighbors; i++) {
-            holder.push_back(priority_queue.top());
-            priority_queue.pop();
-        }
+    auto e_dist = euclidianDistance(root->point, input->point);
 
-        // The next best, which is K+1
-        auto last_best = priority_queue.top();
+    if (priority_queue.size() == how_many_neighbors) {
+        // Check the furthest, best, point in the queue
+        auto furthest_best_point = priority_queue.top();
 
-        // Return the nodes
-        for (const auto &pq : holder) {
-            priority_queue.push(pq);
-        }
-
-        // If our perp distance is worse than the K+1, we can safely discard this plus all children
-        auto dist = std::pow(input->point.at(depth) - root->point.at(depth), 2.0);
-        if (dist > last_best.first) {
+        // If the distance perpendicular is further than the worst point, no points in
+        // its tree can be any closer, so we can prune them away.
+        auto root_perpendicular_dist = euclidianDistance({input->point.at(depth)}, {root->point.at(depth)});
+        if (root_perpendicular_dist > furthest_best_point.first) {
             return;
         }
-    }
 
-    auto e_dist = euclidianDistance(root->point, input->point);
-    std::cout << "Adding " << vectorToString(root->point) << std::endl;
-    priority_queue.push(std::make_pair<>(e_dist, root));
+        std::cout << "Replacing " << vectorToString(furthest_best_point.second->point) << " with "
+                  << vectorToString(root->point) << std::endl;
+        priority_queue.pop();
+        priority_queue.push(std::make_pair<>(e_dist, root));
+    } else {
+        std::cout << "Adding Default " << vectorToString(root->point) << std::endl;
+        priority_queue.push(std::make_pair<>(e_dist, root));
+    }
 
     if (input->point.at(depth) < root->point.at(depth)) {
         getNearestNeighbors(input, root->lower_child, depth + 1);

@@ -34,7 +34,14 @@ private:
 private:
     Node *root_node;
     typedef std::pair<float, Node *> queue_pair;
-    std::priority_queue<queue_pair, std::vector<queue_pair>, std::greater_equal<>> priority_queue;
+    struct PQComparator
+    {
+        bool operator()(const queue_pair &pair1, const queue_pair &pair2)
+        {
+            return pair1.first < pair2.first;
+        }
+    };
+    std::priority_queue<queue_pair, std::vector<queue_pair>, PQComparator> priority_queue;
     unsigned long how_many_neighbors;
 };
 #endif // PARALLEL_K_NN_KDTREE_H

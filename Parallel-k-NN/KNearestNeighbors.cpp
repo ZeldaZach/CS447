@@ -107,16 +107,14 @@ void KNearestNeighbors::readFile(char *file_path)
         unsigned long training_id, query_id, result_id, n_queries, n_dims, n_neighbors;
         reader >> training_id >> query_id >> result_id >> n_queries >> n_dims >> n_neighbors;
 
-        std::cout << pref << "Training file ID: " << std::setw(16) << std::setfill('0') << training_id << std::dec
-                  << std::endl;
-        std::cout << pref << "Query file ID: " << std::setw(16) << std::setfill('0') << query_id << std::dec
-                  << std::endl;
-        std::cout << pref << "Result file ID: " << std::setw(16) << std::setfill('0') << result_id << std::dec
-                  << std::endl;
+        std::cout << pref << "Training file ID: " << training_id << std::dec << std::endl;
+        std::cout << pref << "Query file ID: " << query_id << std::dec << std::endl;
+        std::cout << pref << "Result file ID: " << result_id << std::dec << std::endl;
         std::cout << pref << "Number of queries: " << n_queries << std::endl;
         std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
         std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;
 
+        /*
         for (unsigned long i = 0; i < n_queries; i++) {
             std::cout << pref << "Result " << i << ": ";
             for (unsigned long j = 0; j < n_dims; j++) {
@@ -130,6 +128,7 @@ void KNearestNeighbors::readFile(char *file_path)
             }
             std::cout << std::endl;
         }
+         */
     } else {
         std::cerr << "Unknown file type: " << file_type << std::endl;
         exit(2);
