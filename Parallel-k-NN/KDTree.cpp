@@ -11,7 +11,7 @@
 #include <iostream>
 
 KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, unsigned long max_threads)
-    : root_node(nullptr), how_many_neighbors(neighbors), max_threads(max_threads)
+    : root_node(nullptr), how_many_neighbors(neighbors), max_threads(max_threads - 1)
 {
     auto begin = std::chrono::steady_clock::now();
     root_node = buildTree(std::move(points), 0);
