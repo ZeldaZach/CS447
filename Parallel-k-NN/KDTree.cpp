@@ -16,8 +16,8 @@ KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors)
     root_node = buildTree(std::move(points), 0);
     auto end = std::chrono::steady_clock::now();
 
-    std::cout << "Time to build tree:\t\t\t"
-              << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
+    std::cout << "Time to build tree: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()
+              << "ns" << std::endl;
 }
 
 KDTree::~KDTree()

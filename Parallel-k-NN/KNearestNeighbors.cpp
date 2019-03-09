@@ -195,7 +195,7 @@ std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
         }
     }
     auto end = std::chrono::steady_clock::now();
-    std::cout << "Time to execute queries:\t"
+    std::cout << "Time to execute queries: "
               << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
 
     out_file.close();
