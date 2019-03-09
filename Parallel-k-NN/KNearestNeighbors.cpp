@@ -13,8 +13,24 @@
 #include <unistd.h>
 #include <utility>
 
-KNearestNeighbors::KNearestNeighbors() : tree(nullptr), points_node(nullptr), query_node(nullptr)
+KNearestNeighbors::KNearestNeighbors(unsigned long core_count,
+                                     const char *training_file,
+                                     const char *query_file,
+                                     const char *output_file)
+    : tree(nullptr), points_node(nullptr), query_node(nullptr), thread_count(core_count)
 {
+    // Read in data needed
+    readFile(training_file);
+    readFile(query_file);
+
+    // Create the KD-Tree
+    generateTree();
+
+    // Run through the outputs
+    std::string file_name = generateAndWriteResults(output_file);
+
+    // DEBUG: Read the contents
+    readFile(file_name.c_str());
 }
 
 KNearestNeighbors::~KNearestNeighbors()
@@ -24,7 +40,7 @@ KNearestNeighbors::~KNearestNeighbors()
     delete tree;
 }
 
-void KNearestNeighbors::readFile(char *file_path)
+void KNearestNeighbors::readFile(const char *file_path)
 {
     int fd = open(file_path, O_RDONLY);
     if (fd < 0) {
@@ -138,7 +154,7 @@ void KNearestNeighbors::readFile(char *file_path)
     assert(rv == 0);
 }
 
-std::string KNearestNeighbors::generateAndWriteResults(char *file_path)
+std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
 {
     unsigned long random_id = getRandomData();
 

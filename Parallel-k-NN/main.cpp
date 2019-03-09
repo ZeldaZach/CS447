@@ -17,40 +17,10 @@ void printVector(const std::vector<float> &v)
 
 int main(int argc, char **argv)
 {
-    if (argc != 4) {
+    if (argc != 5) {
         std::cerr << "Usage: ./k-nn <n_cores> <training_file> <query_file> <result_file>" << std::endl;
         exit(1);
     }
 
-    KNearestNeighbors knn;
-
-    // Training data
-    knn.readFile(argv[1]);
-
-    // Query data
-    knn.readFile(argv[2]);
-
-    // Create the tree w/ Training and query data
-    knn.generateTree();
-
-    /*
-    std::cout << "POINTS IN FILE" << std::endl;
-    for (const auto &t : knn.getPoints()) {
-        printVector(t);
-    }
-
-    for (const auto &test_point : knn.getQueries()) {
-        auto result = knn.getNearestNeighbors(test_point);
-
-        std::cout << "Test Point:";
-        printVector(test_point);
-
-        std::cout << "Closest Point:";
-        printVector(result);
-    }
-    */
-
-    // Generate and output results
-    std::string output_file = knn.generateAndWriteResults(argv[3]);
-    knn.readFile(const_cast<char *>(output_file.c_str()));
+    KNearestNeighbors knn(std::strtoul(argv[1], nullptr, 10), argv[2], argv[3], argv[4]);
 }

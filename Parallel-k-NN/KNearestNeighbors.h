@@ -14,17 +14,12 @@
 class KNearestNeighbors
 {
 public:
-    explicit KNearestNeighbors();
+    explicit KNearestNeighbors(unsigned long, const char *, const char *, const char *);
     ~KNearestNeighbors();
-    void readFile(char *);
+    void readFile(const char *);
     void generateTree();
-    std::string generateAndWriteResults(char *);
+    std::string generateAndWriteResults(const char *);
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
-
-    inline std::vector<std::vector<float>> getPoints() const
-    {
-        return points;
-    }
 
     inline std::vector<std::vector<float>> getQueries() const
     {
@@ -94,6 +89,7 @@ private:
     KDTree *tree;
     TrainingNode *points_node;
     QueryNode *query_node;
+    unsigned long thread_count;
 };
 
 #endif // PARALLEL_K_NN_KNEARESTNEIGHBORS_H
