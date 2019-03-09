@@ -6,6 +6,7 @@
 #define PARALLEL_K_NN_KDTREE_H
 
 #include <queue>
+#include <string>
 #include <vector>
 
 class KDTree
