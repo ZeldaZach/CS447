@@ -26,10 +26,11 @@ public:
 
 private:
     KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
-    void getNearestNeighbors(KDTree::Node *, KDTree::Node *, unsigned long);
+    void getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth);
     template <typename T = float> float euclidianDistance(const std::vector<T> &, const std::vector<T> &);
     void deleteTree(Node *root);
     static std::string vectorToString(const std::vector<float> &);
+    bool pruneAwayResults(KDTree::Node *input, KDTree::Node *root, unsigned long depth);
 
 private:
     Node *root_node;
