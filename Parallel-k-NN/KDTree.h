@@ -5,6 +5,7 @@
 #ifndef PARALLEL_K_NN_KDTREE_H
 #define PARALLEL_K_NN_KDTREE_H
 
+#include <future>
 #include <queue>
 #include <string>
 #include <vector>
@@ -20,30 +21,24 @@ private:
     };
 
 public:
-    explicit KDTree(std::vector<std::vector<float>>, unsigned long);
+    explicit KDTree(std::vector<std::vector<float>>, unsigned long, unsigned long max_threads);
     ~KDTree();
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
     Node *getRoot();
 
 private:
-    KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long);
+    KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long, std::promise<Node *> *promise = nullptr);
     void getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth);
-    template <typename T = float> float euclidianDistance(const std::vector<T> &, const std::vector<T> &);
+    float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
     void deleteTree(Node *root);
     static std::string vectorToString(const std::vector<float> &);
     bool pruneAwayResults(KDTree::Node *input, KDTree::Node *root, unsigned long depth);
+    typedef std::pair<float, Node *> queue_pair;
 
 private:
     Node *root_node;
-    typedef std::pair<float, Node *> queue_pair;
-    struct PQComparator
-    {
-        bool operator()(const queue_pair &pair1, const queue_pair &pair2)
-        {
-            return pair1.first < pair2.first;
-        }
-    };
-    std::priority_queue<queue_pair, std::vector<queue_pair>, PQComparator> priority_queue;
-    unsigned long how_many_neighbors;
+    std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> priority_queue;
+    unsigned long how_many_neighbors, max_threads;
+    std::atomic<unsigned long> thread_count;
 };
 #endif // PARALLEL_K_NN_KDTREE_H

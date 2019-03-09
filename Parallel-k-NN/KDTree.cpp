@@ -6,11 +6,12 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <future>
 #include <iomanip>
 #include <iostream>
 
-KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors)
-    : root_node(nullptr), how_many_neighbors(neighbors)
+KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, unsigned long max_threads)
+    : root_node(nullptr), how_many_neighbors(neighbors), max_threads(max_threads)
 {
     auto begin = std::chrono::steady_clock::now();
     root_node = buildTree(std::move(points), 0);
@@ -18,6 +19,8 @@ KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors)
 
     std::cout << "Time to build tree: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()
               << "ns" << std::endl;
+
+    exit(0);
 }
 
 KDTree::~KDTree()
@@ -52,9 +55,9 @@ KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
 {
 }
 
-KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth)
+KDTree::Node *
+KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, std::promise<Node *> *promise)
 {
-
     if (points.empty()) {
         return nullptr;
     }
@@ -70,10 +73,57 @@ KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>> points, unsigned
     size_t middle_index = points.size() / 2;
     auto selected_point = points.at(middle_index);
 
+    /*
+    std::cout << "Using " << vectorToString(selected_point) << " with thread count: " << thread_count << "/"
+              << max_threads << " with promise: " << promise << std::endl;
+    */
+
     std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
     std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
-    return new Node(selected_point, buildTree(lower_points, depth + 1), buildTree(higher_points, depth + 1));
+    Node *lower_node = nullptr, *higher_node = nullptr;
+    std::promise<Node *> lower_promise, higher_promise;
+    std::future<Node *> lower_future = lower_promise.get_future(), higher_future = higher_promise.get_future();
+    // std::thread lower_thread, higher_thread;
+    std::vector<std::thread> threads;
+    bool lower_use_thread = false, higher_use_thread = false;
+
+    if (thread_count < max_threads) {
+        ++thread_count;
+        threads.emplace_back(&KDTree::buildTree, this, lower_points, depth + 1, &lower_promise);
+        lower_use_thread = true;
+    } else {
+        lower_node = buildTree(lower_points, depth + 1);
+    }
+
+    if (thread_count < max_threads) {
+        ++thread_count;
+        threads.emplace_back(std::thread(&KDTree::buildTree, this, higher_points, depth + 1, &higher_promise));
+        higher_use_thread = true;
+    } else {
+        higher_node = buildTree(higher_points, depth + 1);
+    }
+
+    for (auto &thread : threads) {
+        thread.join();
+    }
+
+    if (lower_use_thread) {
+        --thread_count;
+        lower_node = lower_future.get();
+    }
+
+    if (higher_use_thread) {
+        --thread_count;
+        higher_node = higher_future.get();
+    }
+
+    if (promise) {
+        promise->set_value(new Node(selected_point, lower_node, higher_node));
+        return nullptr;
+    }
+
+    return new Node(selected_point, lower_node, higher_node);
 }
 
 KDTree::Node *KDTree::getRoot()
@@ -123,7 +173,7 @@ void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsign
     }
 }
 
-template <typename T> float KDTree::euclidianDistance(const std::vector<T> &p1, const std::vector<T> &p2)
+float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
 {
     if (p1.size() != p2.size()) {
         std::cerr << "Invalid calling of euclidianDistance: p1.size() = " << p1.size() << ", p2.size() = " << p2.size()

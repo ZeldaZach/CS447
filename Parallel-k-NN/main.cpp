@@ -22,5 +22,6 @@ int main(int argc, char **argv)
         exit(1);
     }
 
+    std::cout << "THREAD MAX:" << std::strtoul(argv[1], nullptr, 10) << std::endl;
     KNearestNeighbors knn(std::strtoul(argv[1], nullptr, 10), argv[2], argv[3], argv[4]);
 }

@@ -1,4 +1,4 @@
-FLAGS = -Wall -Wextra -pedantic -g -std=c++14
+FLAGS = -Wall -Wextra -pedantic -g -std=c++14 -stdlib=libc++
 HEADERS = KDTree.h KNearestNeighbors.h
 SOURCES = KDTree.cpp KNearestNeighbors.cpp main.cpp
 EXEC = k-nn
