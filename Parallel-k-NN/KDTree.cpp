@@ -17,8 +17,8 @@ KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, 
     root_node = buildTree(std::move(points), 0);
     auto end = std::chrono::steady_clock::now();
 
-    std::cout << "Time to build tree: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count()
-              << "ns" << std::endl;
+    AtomicWriter() << "Time to build tree: "
+                   << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
 
     exit(0);
 }
@@ -46,7 +46,6 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
         priority_queue.pop();
     }
 
-    // std::cout << "End" << std::endl;
     return return_value;
 }
 
@@ -73,35 +72,33 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     size_t middle_index = points.size() / 2;
     auto selected_point = points.at(middle_index);
 
-    /*
-    std::cout << "Using " << vectorToString(selected_point) << " with thread count: " << thread_count << "/"
-              << max_threads << " with promise: " << promise << std::endl;
-    */
-
+    // Split across the middle
     std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
     std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
+    // Threading variables
     Node *lower_node = nullptr, *higher_node = nullptr;
     std::promise<Node *> lower_promise, higher_promise;
     std::future<Node *> lower_future = lower_promise.get_future(), higher_future = higher_promise.get_future();
-    // std::thread lower_thread, higher_thread;
     std::vector<std::thread> threads;
     bool lower_use_thread = false, higher_use_thread = false;
 
     if (thread_count < max_threads) {
         ++thread_count;
+        // AtomicWriter() << "Starting lower thread: " << thread_count << "/" << max_threads << std::endl;
         threads.emplace_back(&KDTree::buildTree, this, lower_points, depth + 1, &lower_promise);
         lower_use_thread = true;
     } else {
-        lower_node = buildTree(lower_points, depth + 1);
+        lower_node = buildTree(lower_points, depth + 1, nullptr);
     }
 
-    if (thread_count < max_threads) {
+    if (!threads.empty() && thread_count < max_threads) {
         ++thread_count;
-        threads.emplace_back(std::thread(&KDTree::buildTree, this, higher_points, depth + 1, &higher_promise));
+        // AtomicWriter() << "Starting higher thread: " << thread_count << "/" << max_threads << std::endl;
+        threads.emplace_back(&KDTree::buildTree, this, higher_points, depth + 1, &higher_promise);
         higher_use_thread = true;
     } else {
-        higher_node = buildTree(higher_points, depth + 1);
+        higher_node = buildTree(higher_points, depth + 1, nullptr);
     }
 
     for (auto &thread : threads) {
@@ -112,7 +109,6 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
         --thread_count;
         lower_node = lower_future.get();
     }
-
     if (higher_use_thread) {
         --thread_count;
         higher_node = higher_future.get();
@@ -151,7 +147,7 @@ void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsign
     // Cycle of dimensions
     depth %= input->point.size();
 
-    // std::cout << vectorToString(root->point) << std::endl;
+    // AtomicWriter() << vectorToString(root->point) << std::endl;
     auto e_dist = euclidianDistance(root->point, input->point);
 
     // Add the root to our queue, and remove the worst contender
