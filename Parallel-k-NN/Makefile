@@ -2,8 +2,8 @@ FLAGS = -Wall -Wextra -pedantic -g -pthread -std=c++14
 HEADERS = KDTree.h KNearestNeighbors.h AtomicWriter.h
 SOURCES = KDTree.cpp KNearestNeighbors.cpp main.cpp
 EXEC = k-nn
-DATA = data_9223228
-QUERY = query_9223341
+DATA = data_9223721
+QUERY = query_9223730
 ARGS = training/$(DATA).dat training/$(QUERY).dat training/results
 VAL_ARGS = --leak-check=full
 

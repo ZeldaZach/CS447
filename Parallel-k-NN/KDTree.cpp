@@ -54,10 +54,15 @@ KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
 KDTree::Node *
 KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, std::promise<Node *> *promise)
 {
-    // TODO: FIX THIS FUNCTION UP FOR THREADING
     if (points.empty()) {
+        // AtomicWriter() << "Points empty!" << std::endl;
+        if (promise) {
+            promise->set_value_at_thread_exit(nullptr);
+        }
         return nullptr;
     }
+
+    // AtomicWriter() << "buildTree called with promise " << promise << std::endl;
 
     // Which axis to build tree on
     depth %= points.at(0).size();
@@ -67,12 +72,12 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
               [=](const std::vector<float> &v1, const std::vector<float> &v2) { return v1.at(depth) < v2.at(depth); });
 
     // Pluck out the middle element to balance our tree
-    size_t middle_index = points.size() / 2;
-    auto selected_point = points.at(middle_index);
+    const size_t middle_index = points.size() / 2;
+    const auto selected_point = points.at(middle_index);
 
     // Split across the middle
-    std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
-    std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
+    const std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
+    const std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
     /*
     // Threading variables
@@ -118,9 +123,61 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
         return nullptr;
     }*/
 
-    Node *lower_node = buildTree(lower_points, depth + 1, nullptr),
-         *higher_node = buildTree(higher_points, depth + 1, nullptr);
+    // Node *lower_node = buildTree(lower_points, depth + 1, nullptr),
+    //     *higher_node = buildTree(higher_points, depth + 1, nullptr);
 
+    std::promise<Node *> lower, higher;
+    std::future<Node *> lFuture = lower.get_future(), hFuture = higher.get_future();
+    std::vector<std::thread> threads;
+    bool left = false, right = false;
+
+    if (thread_count < max_threads) {
+        ++thread_count;
+        // AtomicWriter() << "Adding lower thread" << std::endl;
+        threads.emplace_back(&KDTree::buildTree, this, lower_points, depth + 1, &lower);
+        left = true;
+    }
+
+    if (thread_count < max_threads) {
+        ++thread_count;
+        // AtomicWriter() << "Adding upper thread" << std::endl;
+        threads.emplace_back(&KDTree::buildTree, this, higher_points, depth + 1, &higher);
+        right = true;
+    }
+
+    for (auto &thread : threads) {
+        if (thread.joinable()) {
+            // AtomicWriter() << "Join Thread:" << thread.get_id() << std::endl;
+            thread.join();
+        }
+    }
+
+    Node *lower_node, *higher_node;
+    // AtomicWriter() << "Checking if valid lower" << std::endl;
+    if (left) {
+        lower_node = lFuture.get();
+        --thread_count;
+    } else {
+        // AtomicWriter() << "Building lower in thread" << std::endl;
+        lower_node = buildTree(lower_points, depth + 1, nullptr);
+    }
+
+    // AtomicWriter() << "Checking if valid higher" << std::endl;
+    if (right) {
+        higher_node = hFuture.get();
+        --thread_count;
+    } else {
+        // AtomicWriter() << "Building higher in thread" << std::endl;
+        higher_node = buildTree(higher_points, depth + 1, nullptr);
+    }
+
+    if (promise) {
+        // AtomicWriter() << "Promise found, setting value: " << lower_node << ":" << higher_node << std::endl;
+        promise->set_value_at_thread_exit(new Node(selected_point, lower_node, higher_node));
+        return new Node(selected_point, lower_node, higher_node);
+    }
+
+    // AtomicWriter() << "New Node made : " << vectorToString(selected_point) << std::endl;
     return new Node(selected_point, lower_node, higher_node);
 }
 
