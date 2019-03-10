@@ -298,7 +298,7 @@ template <typename T> void KNearestNeighbors::binary_write(std::ostream &os, con
     os.write(reinterpret_cast<const char *>(&v), sizeof(v));
 }
 
-void KNearestNeighbors::runQueries(const std::vector<std::vector<float>> queries,
+void KNearestNeighbors::runQueries(const std::vector<std::vector<float>> &queries,
                                    std::promise<std::vector<std::vector<float>>> *promise)
 {
     std::vector<std::vector<float>> values;
