@@ -3,6 +3,7 @@
 //
 
 #include "KNearestNeighbors.h"
+#include "AtomicWriter.h"
 #include "KDTree.h"
 #include <chrono>
 #include <fcntl.h>

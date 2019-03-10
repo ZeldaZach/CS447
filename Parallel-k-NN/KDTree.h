@@ -30,6 +30,7 @@ public:
     ~KDTree();
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
     Node *getRoot();
+    static std::string vectorToString(const std::vector<float> &);
 
 private:
     KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long, std::promise<Node *> *promise = nullptr);
@@ -39,7 +40,6 @@ private:
                              std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> *priority_queue);
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
     void deleteTree(Node *root);
-    static std::string vectorToString(const std::vector<float> &);
     bool pruneAwayResults(KDTree::Node *input,
                           KDTree::Node *root,
                           unsigned long depth,
@@ -47,33 +47,7 @@ private:
 
 private:
     Node *root_node;
-    // std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> priority_queue;
     unsigned long how_many_neighbors, max_threads;
     std::atomic<unsigned long> thread_count;
-};
-
-class AtomicWriter
-{
-    std::ostringstream st;
-    std::ostream &stream;
-
-public:
-    AtomicWriter(std::ostream &s = std::cout) : stream(s)
-    {
-    }
-    template <typename T> AtomicWriter &operator<<(T const &t)
-    {
-        st << t;
-        return *this;
-    }
-    AtomicWriter &operator<<(std::ostream &(*f)(std::ostream &))
-    {
-        st << f;
-        return *this;
-    }
-    ~AtomicWriter()
-    {
-        stream << st.str();
-    }
 };
 #endif // PARALLEL_K_NN_KDTREE_H

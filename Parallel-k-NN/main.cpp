@@ -7,14 +7,6 @@
 #include <iostream>
 #include <string>
 
-void printVector(const std::vector<float> &v)
-{
-    for (float i : v) {
-        std::cout << std::setw(10) << i;
-    }
-    std::cout << std::endl;
-}
-
 int main(int argc, char **argv)
 {
     if (argc != 5) {
@@ -22,6 +14,6 @@ int main(int argc, char **argv)
         exit(1);
     }
 
-    std::cout << "THREAD MAX:" << std::strtoul(argv[1], nullptr, 10) << std::endl;
+    std::cout << "Maximum Threads: " << std::strtoul(argv[1], nullptr, 10) << std::endl;
     KNearestNeighbors knn(std::strtoul(argv[1], nullptr, 10), argv[2], argv[3], argv[4]);
 }

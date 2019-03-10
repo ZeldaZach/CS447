@@ -1,8 +1,10 @@
-FLAGS = -Wall -Wextra -pedantic -g -std=c++14 -pthread
-HEADERS = KDTree.h KNearestNeighbors.h
+FLAGS = -Wall -Wextra -pedantic -g -pthread -std=c++14
+HEADERS = KDTree.h KNearestNeighbors.h AtomicWriter.h
 SOURCES = KDTree.cpp KNearestNeighbors.cpp main.cpp
 EXEC = k-nn
-ARGS = ./training/data_7161234.dat ./training/query_7161251.dat ./training/output
+DATA =
+QUERY =
+ARGS = /Users/zachary/Desktop/training/$(DATA).dat /Users/zachary/Desktop/training/$(QUERY).dat /Users/zachary/Desktop/training/results
 VAL_ARGS = --leak-check=full
 
 all: tree
@@ -13,8 +15,11 @@ tree: $(HEADERS) $(SOURCES)
 run: tree
 	./$(EXEC) $(ARGS)
 
-test: tree
-	valgrind $(VAL_ARGS) ./$(EXEC) $(ARGS)
+test1: tree
+	valgrind $(VAL_ARGS) ./$(EXEC) 1 $(ARGS)
+
+test4: tree
+	valgrind $(VAL_ARGS) ./$(EXEC) 4 $(ARGS)
 
 clean:
 	rm -f $(EXEC)

@@ -3,6 +3,7 @@
 //
 
 #include "KDTree.h"
+#include "AtomicWriter.h"
 #include <algorithm>
 #include <chrono>
 #include <cmath>
@@ -19,8 +20,6 @@ KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, 
 
     AtomicWriter() << "Time to build tree: "
                    << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
-
-    // exit(0);
 }
 
 KDTree::~KDTree()
@@ -38,16 +37,12 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
     delete input_node;
 
     std::vector<std::vector<float>> return_value;
-
     for (unsigned int i = 0; i < how_many_neighbors && !priority_queue->empty(); i++) {
         return_value.push_back(priority_queue->top().second->point);
         priority_queue->pop();
     }
 
-    while (!priority_queue->empty()) {
-        priority_queue->pop();
-    }
-
+    delete priority_queue;
     return return_value;
 }
 
@@ -59,6 +54,7 @@ KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
 KDTree::Node *
 KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, std::promise<Node *> *promise)
 {
+    // TODO: FIX THIS FUNCTION UP FOR THREADING
     if (points.empty()) {
         return nullptr;
     }
@@ -180,8 +176,8 @@ void KDTree::getNearestNeighbors(KDTree::Node *input,
 float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
 {
     if (p1.size() != p2.size()) {
-        std::cerr << "Invalid calling of euclidianDistance: p1.size() = " << p1.size() << ", p2.size() = " << p2.size()
-                  << std::endl;
+        AtomicWriter() << "Invalid calling of euclidianDistance: p1.size() = " << p1.size()
+                       << ", p2.size() = " << p2.size() << std::endl;
         exit(1);
     }
 
