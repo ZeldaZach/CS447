@@ -12,10 +12,10 @@
 #include <iostream>
 
 KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, unsigned long max_threads)
-    : root_node(nullptr), how_many_neighbors(neighbors), max_threads(max_threads - 1)
+    : root_node(nullptr), how_many_neighbors(neighbors), max_threads(2 * max_threads - 2)
 {
     auto begin = std::chrono::steady_clock::now();
-    root_node = buildTree(std::move(points), 0);
+    root_node = buildTree(points, 0);
     auto end = std::chrono::steady_clock::now();
 
     AtomicWriter() << "Time to build tree: "
@@ -55,14 +55,12 @@ KDTree::Node *
 KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, std::promise<Node *> *promise)
 {
     if (points.empty()) {
-        // AtomicWriter() << "Points empty!" << std::endl;
+        // Node has no children, so just let the parent know we're done
         if (promise) {
             promise->set_value_at_thread_exit(nullptr);
         }
         return nullptr;
     }
-
-    // AtomicWriter() << "buildTree called with promise " << promise << std::endl;
 
     // Which axis to build tree on
     depth %= points.at(0).size();
@@ -79,6 +77,11 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     const std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
     const std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
+    /*
+     * We can run up to max_threads at once, so we will spawn
+     * 2*max_threads - 1 children to do build the tree in pieces
+     * This ensures we never use more than max_threads * 100% cpu time
+     */
     std::promise<Node *> lower, higher;
     std::future<Node *> lower_future = lower.get_future(), higher_future = higher.get_future();
     std::vector<std::thread> threads;
@@ -86,51 +89,49 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
 
     if (thread_count < max_threads) {
         ++thread_count;
-        // AtomicWriter() << "Adding lower thread" << std::endl;
         threads.emplace_back(&KDTree::buildTree, this, lower_points, depth + 1, &lower);
         lower_active = true;
     }
 
     if (thread_count < max_threads) {
         ++thread_count;
-        // AtomicWriter() << "Adding upper thread" << std::endl;
         threads.emplace_back(&KDTree::buildTree, this, higher_points, depth + 1, &higher);
         higher_active = true;
     }
 
+    Node *lower_node = nullptr, *higher_node = nullptr;
+
+    // We want to build this node's subtree before we wait for its parallel parts to finish
+    if (!lower_active) {
+        lower_node = buildTree(lower_points, depth + 1, nullptr);
+    }
+    if (!higher_active) {
+        higher_node = buildTree(higher_points, depth + 1, nullptr);
+    }
+
+    // Wait for the node's subtrees to finish before returning out
     for (auto &thread : threads) {
         if (thread.joinable()) {
-            // AtomicWriter() << "Join Thread:" << thread.get_id() << std::endl;
             thread.join();
         }
     }
 
-    Node *lower_node, *higher_node;
-    // AtomicWriter() << "Checking if valid lower" << std::endl;
+    // If we were waiting for a child, get its results
     if (lower_active) {
         lower_node = lower_future.get();
         --thread_count;
-    } else {
-        // AtomicWriter() << "Building lower in thread" << std::endl;
-        lower_node = buildTree(lower_points, depth + 1, nullptr);
     }
-
-    // AtomicWriter() << "Checking if valid higher" << std::endl;
     if (higher_active) {
         higher_node = higher_future.get();
         --thread_count;
-    } else {
-        // AtomicWriter() << "Building higher in thread" << std::endl;
-        higher_node = buildTree(higher_points, depth + 1, nullptr);
     }
 
+    // If we have a parent, let them know we're ready
     if (promise) {
-        // AtomicWriter() << "Promise found, setting value: " << lower_node << ":" << higher_node << std::endl;
         promise->set_value_at_thread_exit(new Node(selected_point, lower_node, higher_node));
         return nullptr;
     }
 
-    // AtomicWriter() << "New Node made : " << vectorToString(selected_point) << std::endl;
     return new Node(selected_point, lower_node, higher_node);
 }
 
