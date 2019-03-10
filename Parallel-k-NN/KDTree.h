@@ -14,6 +14,7 @@
 
 class KDTree
 {
+
 private:
     struct Node
     {
@@ -21,6 +22,8 @@ private:
         std::vector<float> point;
         Node *lower_child, *higher_child;
     };
+
+    typedef std::pair<float, Node *> queue_pair;
 
 public:
     explicit KDTree(std::vector<std::vector<float>>, unsigned long, unsigned long max_threads);
@@ -30,16 +33,21 @@ public:
 
 private:
     KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long, std::promise<Node *> *promise = nullptr);
-    void getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth);
+    void getNearestNeighbors(KDTree::Node *input,
+                             KDTree::Node *root,
+                             unsigned long depth,
+                             std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> *priority_queue);
     float euclidianDistance(const std::vector<float> &, const std::vector<float> &);
     void deleteTree(Node *root);
     static std::string vectorToString(const std::vector<float> &);
-    bool pruneAwayResults(KDTree::Node *input, KDTree::Node *root, unsigned long depth);
-    typedef std::pair<float, Node *> queue_pair;
+    bool pruneAwayResults(KDTree::Node *input,
+                          KDTree::Node *root,
+                          unsigned long depth,
+                          std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> *priority_queue);
 
 private:
     Node *root_node;
-    std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> priority_queue;
+    // std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> priority_queue;
     unsigned long how_many_neighbors, max_threads;
     std::atomic<unsigned long> thread_count;
 };

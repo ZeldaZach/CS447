@@ -186,6 +186,69 @@ std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
 
     // BODY
     auto begin = std::chrono::steady_clock::now();
+
+    auto queries_to_run = getQueries();
+    auto queries_per_thread = queries_to_run.size() / thread_count;
+
+    std::vector<std::thread> threads;
+    std::vector<std::promise<std::vector<std::vector<float>>>> promises;
+    std::vector<std::future<std::vector<std::vector<float>>>> futures;
+    std::vector<std::vector<float>> values;
+
+    for (unsigned long i = 0; i < thread_count; i++) {
+        promises.emplace_back();
+        futures.emplace_back(promises.at(i).get_future());
+    }
+
+    for (unsigned long i = 0; i < thread_count; i++) {
+        auto start_point = queries.begin() + i * queries_per_thread;
+        auto end_point = start_point + queries_per_thread;
+        auto sub_vector = std::vector<std::vector<float>>(start_point, end_point);
+
+        // runQueries(sub_vector, &promises.at(i));
+        threads.emplace_back(&KNearestNeighbors::runQueries, this, sub_vector, &promises.at(i));
+
+        /*for (const auto &query_point : sub_vector) {
+            std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
+            values.insert(values.end(), neighbors.begin(), neighbors.end());
+        }*/
+    }
+
+    for (auto &thread : threads) {
+        if (thread.joinable()) {
+            // AtomicWriter() << "Joining thread " << thread.get_id() << std::endl;
+            thread.join();
+        }
+    }
+
+    for (auto &future : futures) {
+        auto result = future.get();
+        values.insert(values.end(), result.begin(), result.end());
+    }
+
+    for (const auto &t : values) {
+        for (float point : t) {
+            binary_write<float>(out_file, point);
+        }
+    }
+
+    /*
+    for (auto &thread : threads) {
+        AtomicWriter() << "Starting thread " << thread.get_id() << std::endl;
+        thread.join();
+    }
+
+    for (auto &neighbors : futures) {
+        for (auto &neighbor : neighbors.get()) {
+            std::cout << "POINTS:" << neighbor.at(0) << std::endl;
+            for (float point : neighbor) {
+                std::cout << "POINT" << point << std::endl;
+                binary_write<float>(out_file, point);
+            }
+        }
+    }*/
+
+    /*
     for (const auto &query_point : getQueries()) {
         std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
         for (const auto &neighbor : neighbors) {
@@ -194,6 +257,8 @@ std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
             }
         }
     }
+     */
+
     auto end = std::chrono::steady_clock::now();
     std::cout << "Time to execute queries: "
               << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
@@ -231,4 +296,21 @@ unsigned int KNearestNeighbors::getRandomData()
 template <typename T> void KNearestNeighbors::binary_write(std::ostream &os, const T &v)
 {
     os.write(reinterpret_cast<const char *>(&v), sizeof(v));
+}
+
+void KNearestNeighbors::runQueries(const std::vector<std::vector<float>> queries,
+                                   std::promise<std::vector<std::vector<float>>> *promise)
+{
+    std::vector<std::vector<float>> values;
+    for (const auto &query_point : queries) {
+        std::vector<std::vector<float>> neighbors = getNearestNeighbors(query_point);
+        values.insert(values.end(), neighbors.begin(), neighbors.end());
+    }
+
+    if (promise) {
+        // AtomicWriter() << "Setting value" << std::endl;
+        promise->set_value(values);
+    } else {
+        AtomicWriter() << "Unable to set promise" << std::endl;
+    }
 }

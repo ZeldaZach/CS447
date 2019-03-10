@@ -20,6 +20,7 @@ public:
     void generateTree();
     std::string generateAndWriteResults(const char *);
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
+    void runQueries(std::vector<std::vector<float>> queries, std::promise<std::vector<std::vector<float>>> *promise);
 
     inline std::vector<std::vector<float>> getQueries() const
     {

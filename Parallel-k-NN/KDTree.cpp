@@ -20,7 +20,7 @@ KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, 
     AtomicWriter() << "Time to build tree: "
                    << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
 
-    exit(0);
+    // exit(0);
 }
 
 KDTree::~KDTree()
@@ -30,20 +30,22 @@ KDTree::~KDTree()
 
 std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> input)
 {
+    auto priority_queue = new std::priority_queue<KDTree::queue_pair, std::vector<KDTree::queue_pair>, std::less<>>();
+
     // Get all nearest neighbors and put them into the queue
     KDTree::Node *input_node = new KDTree::Node(std::move(input), nullptr, nullptr);
-    getNearestNeighbors(input_node, getRoot(), 0);
+    getNearestNeighbors(input_node, getRoot(), 0, priority_queue);
     delete input_node;
 
     std::vector<std::vector<float>> return_value;
 
-    for (unsigned int i = 0; i < how_many_neighbors && !priority_queue.empty(); i++) {
-        return_value.push_back(priority_queue.top().second->point);
-        priority_queue.pop();
+    for (unsigned int i = 0; i < how_many_neighbors && !priority_queue->empty(); i++) {
+        return_value.push_back(priority_queue->top().second->point);
+        priority_queue->pop();
     }
 
-    while (!priority_queue.empty()) {
-        priority_queue.pop();
+    while (!priority_queue->empty()) {
+        priority_queue->pop();
     }
 
     return return_value;
@@ -127,10 +129,13 @@ KDTree::Node *KDTree::getRoot()
     return root_node;
 }
 
-bool KDTree::pruneAwayResults(KDTree::Node *input, KDTree::Node *root, unsigned long depth)
+bool KDTree::pruneAwayResults(KDTree::Node *input,
+                              KDTree::Node *root,
+                              unsigned long depth,
+                              std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> *priority_queue)
 {
     // Check the furthest, best, point in the queue
-    auto furthest_best_point = priority_queue.top();
+    auto furthest_best_point = priority_queue->top();
 
     // If the distance perpendicular is further than the worst point, no points in
     // its tree can be any closer, so we can prune them away.
@@ -138,7 +143,10 @@ bool KDTree::pruneAwayResults(KDTree::Node *input, KDTree::Node *root, unsigned 
     return (root_perpendicular_dist > furthest_best_point.first);
 }
 
-void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsigned long depth)
+void KDTree::getNearestNeighbors(KDTree::Node *input,
+                                 KDTree::Node *root,
+                                 unsigned long depth,
+                                 std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> *priority_queue)
 {
     if (!root) {
         return;
@@ -151,20 +159,20 @@ void KDTree::getNearestNeighbors(KDTree::Node *input, KDTree::Node *root, unsign
     auto e_dist = euclidianDistance(root->point, input->point);
 
     // Add the root to our queue, and remove the worst contender
-    priority_queue.push(std::make_pair<>(e_dist, root));
-    if (priority_queue.size() > how_many_neighbors) {
-        priority_queue.pop();
+    priority_queue->push(std::make_pair<>(e_dist, root));
+    if (priority_queue->size() > how_many_neighbors) {
+        priority_queue->pop();
     }
 
     if (input->point.at(depth) < root->point.at(depth)) {
-        getNearestNeighbors(input, root->lower_child, depth + 1);
-        if (!pruneAwayResults(input, root, depth)) {
-            getNearestNeighbors(input, root->higher_child, depth + 1);
+        getNearestNeighbors(input, root->lower_child, depth + 1, priority_queue);
+        if (!pruneAwayResults(input, root, depth, priority_queue)) {
+            getNearestNeighbors(input, root->higher_child, depth + 1, priority_queue);
         }
     } else {
-        getNearestNeighbors(input, root->higher_child, depth + 1);
-        if (!pruneAwayResults(input, root, depth)) {
-            getNearestNeighbors(input, root->lower_child, depth + 1);
+        getNearestNeighbors(input, root->higher_child, depth + 1, priority_queue);
+        if (!pruneAwayResults(input, root, depth, priority_queue)) {
+            getNearestNeighbors(input, root->lower_child, depth + 1, priority_queue);
         }
     }
 }
