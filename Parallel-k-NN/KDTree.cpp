@@ -74,6 +74,7 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
     std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
+    /*
     // Threading variables
     Node *lower_node = nullptr, *higher_node = nullptr;
     std::promise<Node *> lower_promise, higher_promise;
@@ -115,7 +116,10 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     if (promise) {
         promise->set_value(new Node(selected_point, lower_node, higher_node));
         return nullptr;
-    }
+    }*/
+
+    Node *lower_node = buildTree(lower_points, depth + 1, nullptr),
+         *higher_node = buildTree(higher_points, depth + 1, nullptr);
 
     return new Node(selected_point, lower_node, higher_node);
 }
