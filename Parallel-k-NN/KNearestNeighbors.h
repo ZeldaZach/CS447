@@ -23,15 +23,10 @@ public:
     void runQueries(const std::vector<std::vector<float>> &queries,
                     std::promise<std::vector<std::vector<float>>> *promise);
 
-    inline std::vector<std::vector<float>> getQueries() const
-    {
-        return queries;
-    }
-
 private:
     bool fileExists(const char *);
     unsigned int getRandomData();
-    template <typename T> void binary_write(std::ostream &, const T &);
+    template <typename T> inline void binary_write(std::ostream &, const T &);
 
 private:
     class Reader
