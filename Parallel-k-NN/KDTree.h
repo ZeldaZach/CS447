@@ -19,7 +19,7 @@ private:
     struct Node
     {
         explicit Node(std::vector<float>, Node *, Node *);
-        std::vector<float> point;
+        const std::vector<float> point;
         Node *lower_child, *higher_child;
     };
 
@@ -47,7 +47,7 @@ private:
 
 private:
     Node *root_node;
-    unsigned long how_many_neighbors, max_threads;
+    const unsigned long k_neighbors, max_threads;
     std::atomic<unsigned long> thread_count;
 };
 #endif // PARALLEL_K_NN_KDTREE_H

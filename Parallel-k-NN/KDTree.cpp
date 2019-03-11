@@ -10,12 +10,13 @@
 #include <future>
 #include <iomanip>
 #include <iostream>
+#include <utility>
 
 KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, unsigned long max_threads)
-    : root_node(nullptr), how_many_neighbors(neighbors), max_threads(2 * max_threads - 2)
+    : root_node(nullptr), k_neighbors(neighbors), max_threads(2 * max_threads - 2)
 {
     auto begin = std::chrono::steady_clock::now();
-    root_node = buildTree(points, 0);
+    root_node = buildTree(std::move(points), 0);
     auto end = std::chrono::steady_clock::now();
 
     AtomicWriter() << "Time to build tree: "
@@ -37,7 +38,7 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
     delete input_node;
 
     std::vector<std::vector<float>> return_value;
-    for (unsigned int i = 0; i < how_many_neighbors && !priority_queue->empty(); i++) {
+    for (unsigned int i = 0; i < k_neighbors && !priority_queue->empty(); i++) {
         return_value.push_back(priority_queue->top().second->point);
         priority_queue->pop();
     }
@@ -112,9 +113,11 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     // Wait for the node's subtrees to finish before returning out
     for (auto &thread : threads) {
         if (thread.joinable()) {
-            thread.join();
+            AtomicWriter() << "Starting thread " << thread.get_id() << std::endl;
+            thread.detach();
         }
     }
+    threads.clear();
 
     // If we were waiting for a child, get its results
     if (lower_active) {
@@ -171,7 +174,7 @@ void KDTree::getNearestNeighbors(KDTree::Node *input,
 
     // Add the root to our queue, and remove the worst contender
     priority_queue->push(std::make_pair<>(e_dist, root));
-    if (priority_queue->size() > how_many_neighbors) {
+    if (priority_queue->size() > k_neighbors) {
         priority_queue->pop();
     }
 
