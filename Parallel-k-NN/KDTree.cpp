@@ -20,7 +20,7 @@ KDTree::KDTree(std::vector<std::vector<float>> points, unsigned long neighbors, 
     auto end = std::chrono::steady_clock::now();
 
     AtomicWriter() << "Time to build tree: "
-                   << std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() << "ns" << std::endl;
+                   << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms" << std::endl;
 }
 
 KDTree::~KDTree()
@@ -75,8 +75,8 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     const auto selected_point = points.at(middle_index);
 
     // Split across the middle
-    const std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
-    const std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
+    std::vector<std::vector<float>> lower_points(points.begin(), points.begin() + middle_index);
+    std::vector<std::vector<float>> higher_points(points.begin() + middle_index + 1, points.end());
 
     /*
      * We can run up to max_threads at once, so we will spawn
@@ -90,13 +90,13 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
 
     if (thread_count < max_threads) {
         ++thread_count;
-        threads.emplace_back(&KDTree::buildTree, this, lower_points, depth + 1, &lower);
+        threads.emplace_back(&KDTree::buildTree, this, std::move(lower_points), depth + 1, &lower);
         lower_active = true;
     }
 
     if (thread_count < max_threads) {
         ++thread_count;
-        threads.emplace_back(&KDTree::buildTree, this, higher_points, depth + 1, &higher);
+        threads.emplace_back(&KDTree::buildTree, this, std::move(higher_points), depth + 1, &higher);
         higher_active = true;
     }
 
@@ -104,10 +104,10 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
 
     // We want to build this node's subtree before we wait for its parallel parts to finish
     if (!lower_active) {
-        lower_node = buildTree(lower_points, depth + 1, nullptr);
+        lower_node = buildTree(std::move(lower_points), depth + 1, nullptr);
     }
     if (!higher_active) {
-        higher_node = buildTree(higher_points, depth + 1, nullptr);
+        higher_node = buildTree(std::move(higher_points), depth + 1, nullptr);
     }
 
     // Wait for the node's subtrees to finish before returning out

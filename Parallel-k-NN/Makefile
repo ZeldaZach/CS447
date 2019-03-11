@@ -1,4 +1,4 @@
-FLAGS = -Wall -Wextra -pedantic -g -pthread -std=c++14
+FLAGS = -Wall -Wextra -pedantic -g -pthread -std=c++14 -O0
 HEADERS = KDTree.h KNearestNeighbors.h AtomicWriter.h
 SOURCES = KDTree.cpp KNearestNeighbors.cpp main.cpp
 EXEC = k-nn
