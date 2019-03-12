@@ -4,3 +4,4 @@
 cmake-*/
 k-nn
 training/
+*.dSYM/
