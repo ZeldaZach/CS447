@@ -1,38 +1,40 @@
-FLAGS = -Wall -Wextra -pedantic -pthread -std=c++14 -O -g
-FLAGS_STATIC = -Wall -Wextra -pedantic -std=c++14 -O -g -pg -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+FLAGS = -Wall -Wextra -pedantic -std=c++14 -O -g -pthread
+FLAGS_STATIC = $(FLAGS) -pg -static -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 HEADERS = KDTree.h KNearestNeighbors.h AtomicWriter.h
 SOURCES = KDTree.cpp KNearestNeighbors.cpp main.cpp
-EXEC = k-nn
-DATA = data_12153728
-QUERY = query_12154023
-ARGS = training/$(DATA).dat training/$(QUERY).dat training/results
 VAL_ARGS = --leak-check=full
+EXEC = k-nn
 
-all: tree
+DATA = FileName.dat
+QUERY = FileName.dat
+ARGS = training/$(DATA) training/$(QUERY) training/results.dat
 
-tree_static: $(HEADERS) $(SOURCES)
+all: dynamic_tree
+
+static_tree: $(HEADERS) $(SOURCES)
 	g++ $(SOURCES) -o $(EXEC) $(FLAGS_STATIC)
 
-tree: $(HEADERS) $(SOURCES)
+dynamic_tree: $(HEADERS) $(SOURCES)
 	g++ $(SOURCES) -o $(EXEC) $(FLAGS)
 
-run1: tree
+run1: dynamic_tree
 	./$(EXEC) 1 $(ARGS)
 
-run4: tree
+run4: dynamic_tree
 	./$(EXEC) 4 $(ARGS)
 
-test1: tree
-	valgrind $(VAL_ARGS) ./$(EXEC) 1 $(ARGS)
-
-test4: tree
-	valgrind $(VAL_ARGS) ./$(EXEC) 4 $(ARGS)
-
-time1: tree
+time1: dynamic_tree
 	time ./$(EXEC) 1 $(ARGS)
 
-time4: tree
+time4: dynamic_tree
 	time ./$(EXEC) 4 $(ARGS)
+
+valgrind1: dynamic_tree
+	valgrind $(VAL_ARGS) ./$(EXEC) 1 $(ARGS)
+
+valgrind4: dynamic_tree
+	valgrind $(VAL_ARGS) ./$(EXEC) 4 $(ARGS)
 
 clean:
 	rm -f $(EXEC)
+

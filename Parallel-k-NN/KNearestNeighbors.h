@@ -13,7 +13,7 @@
 
 class KNearestNeighbors
 {
-public:
+public: // External methods
     explicit KNearestNeighbors(unsigned long, const char *, const char *, const char *);
     ~KNearestNeighbors();
     void readFile(const char *);
@@ -23,12 +23,12 @@ public:
     void runQueries(const std::vector<std::vector<float>> &queries,
                     std::promise<std::vector<std::vector<float>>> *promise);
 
-private:
+private: // Internal methods
     bool fileExists(const char *);
     unsigned int getRandomData();
     template <typename T> inline void binary_write(std::ostream &, const T &);
 
-private:
+private: // Internal structs
     class Reader
     {
     public:
@@ -80,7 +80,7 @@ private:
         unsigned long neighbors;
     };
 
-private:
+private: // Internal variables
     std::vector<std::vector<float>> points;
     std::vector<std::vector<float>> queries;
     KDTree *tree;

@@ -15,7 +15,7 @@
 class KDTree
 {
 
-private:
+private: // Internal variables/structs
     struct Node
     {
         explicit Node(std::vector<float>, Node *, Node *);
@@ -24,15 +24,18 @@ private:
     };
 
     typedef std::pair<float, Node *> queue_pair;
+    Node *root_node;
+    const unsigned long k_neighbors, max_threads;
+    std::atomic<unsigned long> thread_count;
 
-public:
+public: // External methods
     explicit KDTree(std::vector<std::vector<float>> *, unsigned long, unsigned long max_threads);
     ~KDTree();
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
     Node *getRoot();
     static std::string vectorToString(const std::vector<float> &);
 
-private:
+private: // Internal methods
     KDTree::Node *buildTree(std::vector<std::vector<float>>::iterator,
                             std::vector<std::vector<float>>::iterator,
                             unsigned long,
@@ -47,10 +50,5 @@ private:
                           KDTree::Node *root,
                           unsigned long depth,
                           std::priority_queue<queue_pair, std::vector<queue_pair>, std::less<>> *priority_queue);
-
-private:
-    Node *root_node;
-    const unsigned long k_neighbors, max_threads;
-    std::atomic<unsigned long> thread_count;
 };
 #endif // PARALLEL_K_NN_KDTREE_H

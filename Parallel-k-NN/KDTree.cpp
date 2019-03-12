@@ -12,6 +12,12 @@
 #include <iostream>
 #include <utility>
 
+/**
+ * Constructor
+ * @param points
+ * @param neighbors
+ * @param max_threads
+ */
 KDTree::KDTree(std::vector<std::vector<float>> *points, unsigned long neighbors, unsigned long max_threads)
     : root_node(nullptr), k_neighbors(neighbors), max_threads(2 * max_threads - 2)
 {
@@ -23,11 +29,19 @@ KDTree::KDTree(std::vector<std::vector<float>> *points, unsigned long neighbors,
                    << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms" << std::endl;
 }
 
+/**
+ * Destructor
+ */
 KDTree::~KDTree()
 {
     deleteTree(root_node);
 }
 
+/**
+ * Public way to get the nearest neighbors that calls recursive operations
+ * @param input
+ * @return
+ */
 std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> input)
 {
     auto priority_queue = new std::priority_queue<KDTree::queue_pair, std::vector<KDTree::queue_pair>, std::less<>>();
@@ -47,11 +61,26 @@ std::vector<std::vector<float>> KDTree::getNearestNeighbors(std::vector<float> i
     return return_value;
 }
 
+/**
+ * Node Constructor
+ * @param p
+ * @param lc
+ * @param hc
+ */
 KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
     : point(std::move(p)), lower_child(lc), higher_child(hc)
 {
 }
 
+/**
+ * Recurisve method to build the tree in parallel across N threads.
+ * Passes iterators around for optimal speedups.
+ * @param points_begin
+ * @param points_end
+ * @param depth
+ * @param promise
+ * @return
+ */
 KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points_begin,
                                 std::vector<std::vector<float>>::iterator points_end,
                                 unsigned long depth,
@@ -136,11 +165,24 @@ KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points
     return new Node(*selected_point, lower_node, higher_node);
 }
 
+/**
+ * Getter for the root of the tree
+ * @return
+ */
 KDTree::Node *KDTree::getRoot()
 {
     return root_node;
 }
 
+/**
+ * See if a certain branch of the tree should be pruned as it cannot possibly
+ * contain optimal nodes.
+ * @param input
+ * @param root
+ * @param depth
+ * @param priority_queue
+ * @return
+ */
 bool KDTree::pruneAwayResults(KDTree::Node *input,
                               KDTree::Node *root,
                               unsigned long depth,
@@ -155,6 +197,15 @@ bool KDTree::pruneAwayResults(KDTree::Node *input,
     return (root_perpendicular_dist > furthest_best_point.first);
 }
 
+/**
+ * Recursive internal call to determine the K closest neighbors
+ * to the input value. Incorporates pruning to avoid searching
+ * bad branches.
+ * @param input
+ * @param root
+ * @param depth
+ * @param priority_queue
+ */
 void KDTree::getNearestNeighbors(KDTree::Node *input,
                                  KDTree::Node *root,
                                  unsigned long depth,
@@ -189,6 +240,13 @@ void KDTree::getNearestNeighbors(KDTree::Node *input,
     }
 }
 
+/**
+ * Get the "Euclidian distance" for two points
+ * NOTE: We do not square root for efficiency, and choose to work with the squares instead
+ * @param p1
+ * @param p2
+ * @return
+ */
 float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<float> &p2)
 {
     if (p1.size() != p2.size()) {
@@ -206,8 +264,9 @@ float KDTree::euclidianDistance(const std::vector<float> &p1, const std::vector<
     return value;
 }
 
-/*
- * Post Order deletion of the tree
+/**
+ * Post-order deletion of the tree
+ * @param root
  */
 void KDTree::deleteTree(KDTree::Node *root)
 {
@@ -226,6 +285,11 @@ void KDTree::deleteTree(KDTree::Node *root)
     delete root;
 }
 
+/**
+ * Debug method to see the value of a node
+ * @param v
+ * @return
+ */
 std::string KDTree::vectorToString(const std::vector<float> &v)
 {
     std::string ret("(");

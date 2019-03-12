@@ -15,6 +15,13 @@
 #include <unistd.h>
 #include <utility>
 
+/**
+ * Constructor for the KNN problem
+ * @param core_count
+ * @param training_file
+ * @param query_file
+ * @param output_file
+ */
 KNearestNeighbors::KNearestNeighbors(unsigned long core_count,
                                      const char *training_file,
                                      const char *query_file,
@@ -35,6 +42,9 @@ KNearestNeighbors::KNearestNeighbors(unsigned long core_count,
     // readFile(output_file);
 }
 
+/**
+ * Destructor for the KNN problem.
+ */
 KNearestNeighbors::~KNearestNeighbors()
 {
     delete points_node;
@@ -42,6 +52,11 @@ KNearestNeighbors::~KNearestNeighbors()
     delete tree;
 }
 
+/**
+ * Read a binary file with data in for processing
+ * (Credit: CS447 Teaching Staff)
+ * @param file_path
+ */
 void KNearestNeighbors::readFile(const char *file_path)
 {
     int fd = open(file_path, O_RDONLY);
@@ -141,6 +156,11 @@ void KNearestNeighbors::readFile(const char *file_path)
     assert(rv == 0);
 }
 
+/**
+ * Rotate the old output file and create the new one.
+ * Executes queries in parallel with N threads.
+ * @param output_path
+ */
 void KNearestNeighbors::generateAndWriteResults(const char *output_path)
 {
     unsigned long random_id = getRandomData();
@@ -216,22 +236,39 @@ void KNearestNeighbors::generateAndWriteResults(const char *output_path)
     out_file.close();
 }
 
+/**
+ * Checks to see if a file exists.
+ * @param file_path
+ * @return
+ */
 bool KNearestNeighbors::fileExists(const char *file_path)
 {
     std::ifstream file(file_path);
     return static_cast<bool>(file);
 }
 
+/**
+ * Build the tree to run queries against
+ */
 void KNearestNeighbors::generateTree()
 {
     tree = new KDTree(&points, query_node->neighbors, thread_count);
 }
 
+/**
+ * Get the K nearest neighbors to the input node.
+ * @param input
+ * @return
+ */
 std::vector<std::vector<float>> KNearestNeighbors::getNearestNeighbors(std::vector<float> input)
 {
     return tree->getNearestNeighbors(std::move(input));
 }
 
+/**
+ * Generate random data to create a file ID for the output
+ * @return
+ */
 unsigned int KNearestNeighbors::getRandomData()
 {
     unsigned char buffer[8];
@@ -242,11 +279,22 @@ unsigned int KNearestNeighbors::getRandomData()
     return *reinterpret_cast<unsigned int *>(&buffer);
 }
 
+/**
+ * Write out any type of variable in binary format to a file.
+ * @tparam T
+ * @param os
+ * @param v
+ */
 template <typename T> void KNearestNeighbors::binary_write(std::ostream &os, const T &v)
 {
     os.write(reinterpret_cast<const char *>(&v), sizeof(v));
 }
 
+/**
+ * Run the test queries
+ * @param queries
+ * @param promise
+ */
 void KNearestNeighbors::runQueries(const std::vector<std::vector<float>> &queries,
                                    std::promise<std::vector<std::vector<float>>> *promise)
 {
