@@ -52,12 +52,12 @@ KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
 {
 }
 
-KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points_start,
+KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points_begin,
                                 std::vector<std::vector<float>>::iterator points_end,
                                 unsigned long depth,
                                 std::promise<Node *> *promise)
 {
-    if (points_start == points_end) {
+    if (points_begin == points_end) {
         // Node has no children, so just let the parent know we're done
         if (promise) {
             promise->set_value_at_thread_exit(nullptr);
@@ -66,16 +66,16 @@ KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points
     }
 
     // Which axis to build tree on
-    depth %= (*points_start).size();
+    depth %= (*points_begin).size();
 
     // Sort the points based on current axis
-    std::sort(points_start, points_end,
+    std::sort(points_begin, points_end,
               [=](const std::vector<float> &v1, const std::vector<float> &v2) { return v1.at(depth) < v2.at(depth); });
 
     // Pluck out the middle element to balance our tree
 
-    const size_t middle_index = (points_end - points_start) / 2;
-    const auto selected_point = points_start + middle_index;
+    const size_t middle_index = (points_end - points_begin) / 2;
+    const auto selected_point = points_begin + middle_index;
 
     /*
      * We can run up to max_threads at once, so we will spawn
@@ -89,13 +89,13 @@ KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points
 
     if (thread_count < max_threads) {
         ++thread_count;
-        threads.emplace_back(&KDTree::buildTree, this, points_start, points_start + middle_index, depth + 1, &lower);
+        threads.emplace_back(&KDTree::buildTree, this, points_begin, points_begin + middle_index, depth + 1, &lower);
         lower_active = true;
     }
 
     if (thread_count < max_threads) {
         ++thread_count;
-        threads.emplace_back(&KDTree::buildTree, this, points_start + middle_index + 1, points_end, depth + 1, &higher);
+        threads.emplace_back(&KDTree::buildTree, this, points_begin + middle_index + 1, points_end, depth + 1, &higher);
         higher_active = true;
     }
 
@@ -103,10 +103,10 @@ KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points
 
     // We want to build this node's subtree before we wait for its parallel parts to finish
     if (!lower_active) {
-        lower_node = buildTree(points_start, points_start + middle_index, depth + 1, nullptr);
+        lower_node = buildTree(points_begin, points_begin + middle_index, depth + 1, nullptr);
     }
     if (!higher_active) {
-        higher_node = buildTree(points_start + middle_index + 1, points_end, depth + 1, nullptr);
+        higher_node = buildTree(points_begin + middle_index + 1, points_end, depth + 1, nullptr);
     }
 
     // Wait for the node's subtrees to finish before returning out
