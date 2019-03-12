@@ -33,7 +33,10 @@ public:
     static std::string vectorToString(const std::vector<float> &);
 
 private:
-    KDTree::Node *buildTree(std::vector<std::vector<float>> *, unsigned long, std::promise<Node *> *promise = nullptr);
+    KDTree::Node *buildTree(std::vector<std::vector<float>>::iterator,
+                            std::vector<std::vector<float>>::iterator,
+                            unsigned long,
+                            std::promise<Node *> *promise = nullptr);
     void getNearestNeighbors(KDTree::Node *input,
                              KDTree::Node *root,
                              unsigned long depth,

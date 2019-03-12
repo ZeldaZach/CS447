@@ -16,7 +16,7 @@ KDTree::KDTree(std::vector<std::vector<float>> *points, unsigned long neighbors,
     : root_node(nullptr), k_neighbors(neighbors), max_threads(2 * max_threads - 2)
 {
     auto begin = std::chrono::steady_clock::now();
-    root_node = buildTree(points, 0);
+    root_node = buildTree(points->begin(), points->end(), 0);
     auto end = std::chrono::steady_clock::now();
 
     AtomicWriter() << "Time to build tree: "
@@ -52,10 +52,12 @@ KDTree::Node::Node(std::vector<float> p, KDTree::Node *lc, KDTree::Node *hc)
 {
 }
 
-KDTree::Node *
-KDTree::buildTree(std::vector<std::vector<float>> *points, unsigned long depth, std::promise<Node *> *promise)
+KDTree::Node *KDTree::buildTree(std::vector<std::vector<float>>::iterator points_start,
+                                std::vector<std::vector<float>>::iterator points_end,
+                                unsigned long depth,
+                                std::promise<Node *> *promise)
 {
-    if (points->empty()) {
+    if (points_start == points_end) {
         // Node has no children, so just let the parent know we're done
         if (promise) {
             promise->set_value_at_thread_exit(nullptr);
@@ -64,19 +66,16 @@ KDTree::buildTree(std::vector<std::vector<float>> *points, unsigned long depth, 
     }
 
     // Which axis to build tree on
-    depth %= points->at(0).size();
+    depth %= (*points_start).size();
 
     // Sort the points based on current axis
-    std::sort(points->begin(), points->end(),
+    std::sort(points_start, points_end,
               [=](const std::vector<float> &v1, const std::vector<float> &v2) { return v1.at(depth) < v2.at(depth); });
 
     // Pluck out the middle element to balance our tree
-    const size_t middle_index = points->size() / 2;
-    const auto selected_point = points->at(middle_index);
 
-    // Split across the middle
-    std::vector<std::vector<float>> lower_points(points->begin(), points->begin() + middle_index);
-    std::vector<std::vector<float>> higher_points(points->begin() + middle_index + 1, points->end());
+    const size_t middle_index = (points_end - points_start) / 2;
+    const auto selected_point = points_start + middle_index;
 
     /*
      * We can run up to max_threads at once, so we will spawn
@@ -90,15 +89,13 @@ KDTree::buildTree(std::vector<std::vector<float>> *points, unsigned long depth, 
 
     if (thread_count < max_threads) {
         ++thread_count;
-        threads.emplace_back(&KDTree::buildTree, this, &lower_points, depth + 1, &lower);
-        // lower_points = std::vector<std::vector<float>>();
+        threads.emplace_back(&KDTree::buildTree, this, points_start, points_start + middle_index, depth + 1, &lower);
         lower_active = true;
     }
 
     if (thread_count < max_threads) {
         ++thread_count;
-        threads.emplace_back(&KDTree::buildTree, this, &higher_points, depth + 1, &higher);
-        // higher_points = std::vector<std::vector<float>>();
+        threads.emplace_back(&KDTree::buildTree, this, points_start + middle_index + 1, points_end, depth + 1, &higher);
         higher_active = true;
     }
 
@@ -106,16 +103,15 @@ KDTree::buildTree(std::vector<std::vector<float>> *points, unsigned long depth, 
 
     // We want to build this node's subtree before we wait for its parallel parts to finish
     if (!lower_active) {
-        lower_node = buildTree(&lower_points, depth + 1, nullptr);
+        lower_node = buildTree(points_start, points_start + middle_index, depth + 1, nullptr);
     }
     if (!higher_active) {
-        higher_node = buildTree(&higher_points, depth + 1, nullptr);
+        higher_node = buildTree(points_start + middle_index + 1, points_end, depth + 1, nullptr);
     }
 
     // Wait for the node's subtrees to finish before returning out
     for (auto &thread : threads) {
         if (thread.joinable()) {
-            // AtomicWriter() << "Starting thread " << thread.get_id() << std::endl;
             thread.detach();
         }
     }
@@ -133,11 +129,11 @@ KDTree::buildTree(std::vector<std::vector<float>> *points, unsigned long depth, 
 
     // If we have a parent, let them know we're ready
     if (promise) {
-        promise->set_value_at_thread_exit(new Node(selected_point, lower_node, higher_node));
+        promise->set_value_at_thread_exit(new Node(*selected_point, lower_node, higher_node));
         return nullptr;
     }
 
-    return new Node(selected_point, lower_node, higher_node);
+    return new Node(*selected_point, lower_node, higher_node);
 }
 
 KDTree::Node *KDTree::getRoot()

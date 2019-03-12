@@ -3,8 +3,8 @@ FLAGS_STATIC = -Wall -Wextra -pedantic -std=c++14 -O -g -pg -static -pthread -Wl
 HEADERS = KDTree.h KNearestNeighbors.h AtomicWriter.h
 SOURCES = KDTree.cpp KNearestNeighbors.cpp main.cpp
 EXEC = k-nn
-DATA = data_9223721
-QUERY = query_9223730
+DATA = data_12153728
+QUERY = query_12154023
 ARGS = training/$(DATA).dat training/$(QUERY).dat training/results
 VAL_ARGS = --leak-check=full
 
@@ -16,8 +16,11 @@ tree_static: $(HEADERS) $(SOURCES)
 tree: $(HEADERS) $(SOURCES)
 	g++ $(SOURCES) -o $(EXEC) $(FLAGS)
 
-run: tree
-	./$(EXEC) $(ARGS)
+run1: tree
+	./$(EXEC) 1 $(ARGS)
+
+run4: tree
+	./$(EXEC) 4 $(ARGS)
 
 test1: tree
 	valgrind $(VAL_ARGS) ./$(EXEC) 1 $(ARGS)
