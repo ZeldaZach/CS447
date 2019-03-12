@@ -19,7 +19,7 @@
  * @param max_threads
  */
 KDTree::KDTree(std::vector<std::vector<float>> *points, unsigned long neighbors, unsigned long max_threads)
-    : root_node(nullptr), k_neighbors(neighbors), max_threads(2 * max_threads - 2)
+    : root_node(nullptr), k_neighbors(neighbors), max_threads(2 * max_threads - 2), thread_count(0)
 {
     auto begin = std::chrono::steady_clock::now();
     root_node = buildTree(points->begin(), points->end(), 0);
