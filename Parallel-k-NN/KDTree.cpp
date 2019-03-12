@@ -91,12 +91,14 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     if (thread_count < max_threads) {
         ++thread_count;
         threads.emplace_back(&KDTree::buildTree, this, std::move(lower_points), depth + 1, &lower);
+        lower_points = std::vector<std::vector<float>>();
         lower_active = true;
     }
 
     if (thread_count < max_threads) {
         ++thread_count;
         threads.emplace_back(&KDTree::buildTree, this, std::move(higher_points), depth + 1, &higher);
+        higher_points = std::vector<std::vector<float>>();
         higher_active = true;
     }
 
@@ -113,7 +115,7 @@ KDTree::buildTree(std::vector<std::vector<float>> points, unsigned long depth, s
     // Wait for the node's subtrees to finish before returning out
     for (auto &thread : threads) {
         if (thread.joinable()) {
-            AtomicWriter() << "Starting thread " << thread.get_id() << std::endl;
+            // AtomicWriter() << "Starting thread " << thread.get_id() << std::endl;
             thread.detach();
         }
     }
