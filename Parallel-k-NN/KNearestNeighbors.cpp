@@ -224,7 +224,7 @@ bool KNearestNeighbors::fileExists(const char *file_path)
 
 void KNearestNeighbors::generateTree()
 {
-    tree = new KDTree(points, query_node->neighbors, thread_count);
+    tree = new KDTree(&points, query_node->neighbors, thread_count);
 }
 
 std::vector<std::vector<float>> KNearestNeighbors::getNearestNeighbors(std::vector<float> input)

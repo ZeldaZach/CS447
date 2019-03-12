@@ -26,14 +26,14 @@ private:
     typedef std::pair<float, Node *> queue_pair;
 
 public:
-    explicit KDTree(std::vector<std::vector<float>>, unsigned long, unsigned long max_threads);
+    explicit KDTree(std::vector<std::vector<float>> *, unsigned long, unsigned long max_threads);
     ~KDTree();
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
     Node *getRoot();
     static std::string vectorToString(const std::vector<float> &);
 
 private:
-    KDTree::Node *buildTree(std::vector<std::vector<float>>, unsigned long, std::promise<Node *> *promise = nullptr);
+    KDTree::Node *buildTree(std::vector<std::vector<float>> *, unsigned long, std::promise<Node *> *promise = nullptr);
     void getNearestNeighbors(KDTree::Node *input,
                              KDTree::Node *root,
                              unsigned long depth,
