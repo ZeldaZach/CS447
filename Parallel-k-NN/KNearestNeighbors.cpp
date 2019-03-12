@@ -29,10 +29,10 @@ KNearestNeighbors::KNearestNeighbors(unsigned long core_count,
     generateTree();
 
     // Run through the outputs
-    std::string file_name = generateAndWriteResults(output_file);
+    generateAndWriteResults(output_file);
 
     // DEBUG: Read the contents
-    readFile(file_name.c_str());
+    // readFile(output_file);
 }
 
 KNearestNeighbors::~KNearestNeighbors()
@@ -132,21 +132,6 @@ void KNearestNeighbors::readFile(const char *file_path)
         std::cout << pref << "Number of dimensions: " << n_dims << std::endl;
         std::cout << pref << "Number of neighbors returned for each query: " << n_neighbors << std::endl;
 
-        /*
-        for (unsigned long i = 0; i < n_queries; i++) {
-            std::cout << pref << "Result " << i << ": ";
-            for (unsigned long j = 0; j < n_dims; j++) {
-                float f;
-                reader >> f;
-                std::cout << std::fixed << std::setprecision(6) << std::setw(15) << std::setfill(' ') << f;
-                // Add comma.
-                if (j < n_dims - 1) {
-                    std::cout << ", ";
-                }
-            }
-            std::cout << std::endl;
-        }
-         */
     } else {
         std::cerr << "Unknown file type: " << file_type << std::endl;
         exit(2);
@@ -156,21 +141,19 @@ void KNearestNeighbors::readFile(const char *file_path)
     assert(rv == 0);
 }
 
-std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
+void KNearestNeighbors::generateAndWriteResults(const char *output_path)
 {
     unsigned long random_id = getRandomData();
 
-    std::string output_path = std::string(file_path) + "_" + std::to_string(random_id) + ".dat";
-
-    if (fileExists(output_path.c_str())) {
+    if (fileExists(output_path)) {
         std::cerr << "Output file exists, renaming it" << std::endl;
-        if (std::rename(output_path.c_str(), (output_path + std::to_string(std::time(nullptr))).c_str()) < 0) {
+        if (std::rename(output_path, (output_path + std::to_string(std::time(nullptr))).c_str()) < 0) {
             std::cerr << "Failed to rename: " << strerror(errno) << std::endl;
             exit(1);
         }
     }
 
-    std::ofstream out_file(output_path.c_str(), std::ios::binary);
+    std::ofstream out_file(output_path, std::ios::binary);
     if (!out_file.is_open()) {
         std::cerr << "Unable to open output file" << std::endl;
         exit(1);
@@ -215,6 +198,7 @@ std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
             thread.join();
         }
     }
+    threads.clear();
 
     // Write the results from the queries, in order
     for (auto &future : futures) {
@@ -230,7 +214,6 @@ std::string KNearestNeighbors::generateAndWriteResults(const char *file_path)
               << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms" << std::endl;
 
     out_file.close();
-    return output_path;
 }
 
 bool KNearestNeighbors::fileExists(const char *file_path)

@@ -18,7 +18,7 @@ public:
     ~KNearestNeighbors();
     void readFile(const char *);
     void generateTree();
-    std::string generateAndWriteResults(const char *);
+    void generateAndWriteResults(const char *);
     std::vector<std::vector<float>> getNearestNeighbors(std::vector<float>);
     void runQueries(const std::vector<std::vector<float>> &queries,
                     std::promise<std::vector<std::vector<float>>> *promise);
