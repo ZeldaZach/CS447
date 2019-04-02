@@ -1,0 +1,64 @@
+#!/usr/bin/python2.7
+
+import argparse
+from argparse import RawTextHelpFormatter
+import struct
+import random
+import sys
+
+def getUniqueFileID():
+    f = open('/dev/urandom','rb')
+    uniqueid = struct.unpack('=Q',f.read(8))[0]
+    f.close()
+    return uniqueid
+
+parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter)
+parser.add_argument("queryCount", type=int,help="Number of queries")
+parser.add_argument("cols", type=int,help="Number of dimensions")
+parser.add_argument("dist", type=int,help="""Type of distribution\n0: Uniform Distribution\n1: Centered Uniform
+        Distribution\n2: Beta distribution\n3: Exponential distribution""",choices=[0, 1, 2,3])
+parser.add_argument("k", type=int,help="Number of neighbors to return for each query")
+args = parser.parse_args()
+
+cols = args.cols
+dist = args.dist
+queryCount = args.queryCount
+k = args.k
+fileid = getUniqueFileID()
+queryfilename = "query/" + str(cols) + "d_" + str(queryCount) + "_d" + str(dist) + "_" + str(k) + ".dat"
+
+dp = open(queryfilename,"wb")
+
+
+#header for query file
+dp.write("QUERY")
+dp.write(struct.pack("=h",0))
+dp.write(struct.pack("=B",0))
+dp.write(struct.pack("=Q",fileid))
+dp.write(struct.pack("=Q",queryCount))
+dp.write(struct.pack("=Q",args.cols))
+dp.write(struct.pack("=Q",k))
+
+funcList = [random.uniform,random.gauss,random.betavariate,random.expovariate]
+paramList = [(-1000,1000),(0,1000),(30,20),(0.01,)]
+
+# Generating data for query file
+'''
+part = int(queryCount/100)
+print("\nQuery file generation progress:")
+'''
+for i in range(0,queryCount):
+    '''
+    #progress bar
+    if(part!=0 and i%part==0):
+        sys.stdout.write('\r')
+        sys.stdout.write("[%-100s] %d%%" % ('='*(i/part), (i/part)))
+        sys.stdout.flush()
+    '''
+    buff = str()
+    for j in range(0,cols):
+        buff+=struct.pack("=f",funcList[dist](*paramList[dist]))
+    dp.write(buff)
+dp.close()
+
+print(queryfilename);
