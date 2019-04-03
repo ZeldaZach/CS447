@@ -1,65 +1,82 @@
+#include "matplotlibcpp.h"
+#include <chrono>
+#include <iomanip>
 #include <iostream>
+#include <omp.h>
 #include <random>
 #include <vector>
-#include <iomanip>
-#include "matplotlibcpp.h"
 
 namespace plt = matplotlibcpp;
 
-std::vector<int> sample_sphere(const int dimension) {
+/**
+ * Get a histogram vector for points distance from center
+ * of a sphere in K dimension
+ * @param dimension Dimension to test
+ * @return Histogram vector
+ */
+std::vector<int> sample_sphere(const int dimension)
+{
     assert(dimension > 0);
 
-    std::default_random_engine generator{}; //std::chrono::system_clock::now().time_since_epoch().count());
+    std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
     std::normal_distribution<> distribution(0.0, 1.0);
 
     std::vector<int> histogram;
     histogram.resize(100);
 
+    auto begin = std::chrono::steady_clock::now();
+
+#pragma omp parallel for
     // Run the experiment N times
-    for (int i = 0; i < 1000000; i++) {
-        // Determine our Gaussian variables
-        std::vector<double> gaussian_values;
-        gaussian_values.reserve(dimension);
+    for (int i = 0; i < 10000; i++) {
+        double sum;
 
-        for (auto j = 0; j < dimension; j++) {
-            gaussian_values.push_back(distribution(generator));
-        }
+        do {
+            // Determine our Gaussian variables
+            std::vector<double> gaussian_values;
+            gaussian_values.reserve(dimension);
 
-        // https://karthikkaranth.me/blog/generating-random-points-in-a-sphere/
-        // Normalize the values generated
-        double sum = 0.0;
-        for (const auto &t : gaussian_values) {
-            sum += t * t;
-        }
-        double normalizer = std::sqrt(sum);
-        double c = std::cbrt(distribution(generator));
+            sum = 0.0;
+            for (auto j = 0; j < dimension; j++) {
+                const double random_num = distribution(generator);
 
-        for (const double &t : gaussian_values) {
-            double normalized_value = std::abs(t / normalizer * c);
-            int index = static_cast<int>(normalized_value * 100);
-            ++histogram[index];
-        }
+                gaussian_values.push_back(random_num);
+                sum += random_num * random_num;
+            }
+        } while (sum > 1.0);
+
+        ++histogram[static_cast<int>(std::sqrt(sum) * 100)];
     }
+
+    auto end = std::chrono::steady_clock::now();
+    std::cout << "Time to build dimension " << dimension << ": "
+              << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms" << std::endl;
 
     return histogram;
-
 }
 
-int main() {
-    std::vector<std::vector<int>> dimensions;
-    for (int dimension = 2; dimension <= 5; dimension++) {
-        dimensions.push_back(sample_sphere(dimension));
-        std::cout << "Finished Dimension " << dimension << std::endl;
+/**
+ * Main method to start the program
+ * @param argc # Args
+ * @param argv Args
+ */
+int main(int argc, char **argv)
+{
+    // Set max threads if necessary
+    if (argc > 2) {
+        omp_set_num_threads(std::atoi(argv[1]));
     }
 
-    for (int dimension = 2; dimension <= 5; dimension++) {
-        plt::named_plot(std::to_string(dimension), dimensions.at(dimension - 2));
+    // Calculate and plot the histogram
+    for (int dimension = 2; dimension <= 11; dimension++) {
+        const auto t = sample_sphere(dimension);
+        plt::named_plot(std::to_string(dimension), t);
     }
 
-
-    plt::title("Dimensions");
-    plt::xlabel("Distance from sphere surface [0.00, 1.00]");
-    plt::ylabel("Number of points at specific distance");
+    // More plot stuff
+    plt::title("Hypersphere Point Check");
+    plt::xlabel("Distance from Sphere Center * 100");
+    plt::ylabel("Points at Specific Distance");
     plt::legend();
     plt::show();
 }
