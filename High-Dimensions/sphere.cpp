@@ -74,12 +74,16 @@ std::vector<int> sample_sphere(const int dimension, const int sample_points, con
 int main(int argc, char **argv)
 {
     unsigned int node_points = 1000;
+    bool show_gui_graph = false;
 
     // Set max threads if necessary
     if (argc >= 2) {
         omp_set_num_threads(std::strtol(argv[1], nullptr, 10));
         if (argc >= 3) {
             node_points = std::strtol(argv[2], nullptr, 10);
+            if (argc >= 4) {
+                show_gui_graph = (strcmp(argv[3], "true") == 0);
+            }
         }
     } else {
         omp_set_num_threads(1);
@@ -132,9 +136,11 @@ int main(int argc, char **argv)
     }
 
     std::cout.rdbuf(coutbuf); // reset to standard output again
-    plt::title("Hypersphere Point Check");
-    plt::xlabel("Distance from Sphere Center * 100");
-    plt::ylabel("Points at Specific Distance");
-    plt::legend();
-    plt::show();
+    if (show_gui_graph) {
+        plt::title("Hypersphere Point Check");
+        plt::xlabel("Distance from Sphere Center * 100");
+        plt::ylabel("Points at Specific Distance");
+        plt::legend();
+        plt::show();
+    }
 }
