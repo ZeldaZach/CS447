@@ -1,0 +1,8 @@
+# Hypersphere Checker
+
+
+### References:
+- [ResearchGate](https://www.researchgate.net/post/Is_there_a_way_to_specify_how_many_cores_a_program_should_run-in_other_words_can_I_control_where_the_threads_are_mapped)
+- [Waterloo](http://compneuro.uwaterloo.ca/files/publications/voelker.2017.pdf)
+- [Wikipedia](https://en.wikipedia.org/wiki/Normal_distribution)
+- [WolframAlpha](http://mathworld.wolfram.com/HyperspherePointPicking.html)
