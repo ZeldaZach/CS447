@@ -1,6 +1,15 @@
 PY_LIB = -I/usr/include/python2.7 -I/usr/local/lib/python2.7/site-packages/numpy/core/include -DWITHOUT_NUMPY -lpython2.7
 FLAGS = -Wall -Wextra -pedantic -std=c++14 -O
+
+UNAME := $(shell uname)
+
+ifeq ($(UNAME), Linux)
+CC = g++
+endif
+ifeq ($(UNAME), Darwin)
 CC = g++-8
+endif
+
 
 all: make_sphere make_segments
 
