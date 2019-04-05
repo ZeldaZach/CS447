@@ -1,5 +1,6 @@
 #include "matplotlibcpp.h"
 #include <chrono>
+#include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <omp.h>
@@ -84,10 +85,15 @@ int main(int argc, char **argv)
         omp_set_num_threads(1);
     }
 
+    // Redirect std::cout to file for future usages
+    std::ofstream out("hypersphere_output.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf();
+    std::cout.rdbuf(out.rdbuf());
+
     std::cout << "Using " << omp_get_max_threads() << " threads" << std::endl;
 
     // Holder to show the histogram
-    std::vector<std::vector<int>> histograms(14);
+    std::vector<std::vector<int>> histograms(15);
 
     // Calculate histogram for non-parallel for timing
     const auto start = std::chrono::steady_clock::now();
@@ -117,7 +123,15 @@ int main(int argc, char **argv)
     // Create a histogram plot setup
     for (unsigned long i = 0; i < histograms.size(); i++) {
         plt::named_plot(std::to_string(i + 2), histograms.at(i));
+
+        std::cout << "\nDimension " << i + 2 << " Distance from center histogram" << std::endl;
+        for (unsigned long j = 0; j < histograms.at(i).size(); j++) {
+            std::cout << std::setw(4) << 0.01 * j << ": " << 1.0 * histograms.at(i).at(j) / node_points * 100 << "%"
+                      << std::endl;
+        }
     }
+
+    std::cout.rdbuf(coutbuf); // reset to standard output again
     plt::title("Hypersphere Point Check");
     plt::xlabel("Distance from Sphere Center * 100");
     plt::ylabel("Points at Specific Distance");
