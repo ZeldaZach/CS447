@@ -17,7 +17,11 @@
 #include <stdexcept>
 #include <vector>
 
+#if defined(__APPLE__)
 #include <Python/Python.h>
+#else
+#include <Python.h>
+#endif
 
 #ifndef WITHOUT_NUMPY
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
