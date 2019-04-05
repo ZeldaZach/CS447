@@ -1,1 +1,4 @@
 .idea/
+hypersphere
+*.dSYM/
+cmake-build-debug/
