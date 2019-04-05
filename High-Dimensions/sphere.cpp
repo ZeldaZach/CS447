@@ -15,9 +15,10 @@ namespace plt = matplotlibcpp;
  * @param dimension Dimension to test
  * @param sample_points How many points to generate on sphere
  * @param is_parallel to execute in OpenMP or not
- * @return Histogram vector
+ * @return Histogram vector and time to execute
  */
-std::vector<int> sample_sphere(const int dimension, const int sample_points, const bool is_parallel)
+std::pair<std::vector<int>, unsigned long>
+sample_sphere(const int dimension, const int sample_points, const bool is_parallel)
 {
     assert(dimension > 0);
 
@@ -59,11 +60,9 @@ std::vector<int> sample_sphere(const int dimension, const int sample_points, con
         std::cout << "(Not Parallel) ";
     }
 
-    std::cout << "Dimension " << dimension << " with " << sample_points
-              << " nodes: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count() << "ms"
-              << std::endl;
-
-    return histogram;
+    const unsigned long time = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+    std::cout << "Dimension " << dimension << " with " << sample_points << " nodes: " << time << "ms" << std::endl;
+    return std::make_pair<>(histogram, time);
 }
 
 /**
@@ -99,30 +98,24 @@ int main(int argc, char **argv)
     // Holder to show the histogram
     std::vector<std::vector<int>> histograms(15);
 
+    unsigned long run_time = 0;
     // Calculate histogram for non-parallel for timing
-    const auto start = std::chrono::steady_clock::now();
     for (int dimension = 2; dimension <= 16; dimension++) {
-        const auto histogram = sample_sphere(dimension, node_points, false);
-        histograms.push_back(histogram);
+        const auto histogram_and_time = sample_sphere(dimension, node_points, false);
+        run_time += histogram_and_time.second;
     }
-    const auto end = std::chrono::steady_clock::now();
-
-    // Clear histogram for real insertions
-    histograms.clear();
 
     // Calculate and plot the histogram (for parallel version)
-    const auto p_start = std::chrono::steady_clock::now();
+    unsigned long p_run_time = 0;
     for (int dimension = 2; dimension <= 16; dimension++) {
-        const auto histogram = sample_sphere(dimension, node_points, true);
-        histograms.push_back(histogram);
+        const auto histogram_and_time = sample_sphere(dimension, node_points, true);
+        histograms.push_back(histogram_and_time.first);
+        p_run_time += histogram_and_time.second;
     }
-    const auto p_end = std::chrono::steady_clock::now();
 
     // Print timetables
-    std::cout << "Non-Parallel computation time: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
-    std::cout << "    Parallel computation time: "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(p_end - p_start).count() << "ms" << std::endl;
+    std::cout << "Non-Parallel computation time: " << run_time << "ms" << std::endl;
+    std::cout << "    Parallel computation time: " << p_run_time << "ms" << std::endl;
 
     // Create a histogram plot setup
     for (unsigned long i = 0; i < histograms.size(); i++) {
