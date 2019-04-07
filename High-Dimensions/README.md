@@ -1,5 +1,8 @@
-# Hypersphere Checker
+# Assignment-2
+CS 447/547 2019 S: Assignment 2
+http://www.cs.binghamton.edu/~kchiu/cs547/prog/2/
 
+## Hypersphere Checker
 
 ### References:
 - [ResearchGate](https://www.researchgate.net/post/Is_there_a_way_to_specify_how_many_cores_a_program_should_run-in_other_words_can_I_control_where_the_threads_are_mapped)
