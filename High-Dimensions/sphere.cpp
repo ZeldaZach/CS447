@@ -1,5 +1,6 @@
 #include "matplotlibcpp.h"
 #include <chrono>
+#include <cstdlib>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -22,8 +23,11 @@ sample_sphere(const int dimension, const int sample_points, const bool is_parall
 {
     assert(dimension > 0);
 
-    std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
-    std::normal_distribution<> distribution(0.0, 1.0);
+    static thread_local unsigned int seed = time(nullptr);
+
+    // static thread_local std::mt19937 generator(std::chrono::system_clock::now().time_since_epoch().count());
+    // std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
+    // std::normal_distribution<> distribution(0.0, 1.0);
 
     std::vector<int> histogram(100);
 
@@ -36,7 +40,8 @@ sample_sphere(const int dimension, const int sample_points, const bool is_parall
         std::vector<double> gaussian_values(dimension + 2);
 
         for (int d = 0; d < dimension + 2; d++) {
-            gaussian_values.push_back(distribution(generator));
+            // gaussian_values.push_back(distribution(generator));
+            gaussian_values.push_back(rand_r(&seed) / (double)RAND_MAX);
             normalizer += gaussian_values.back() * gaussian_values.back();
         }
         gaussian_values.pop_back();
@@ -72,8 +77,18 @@ sample_sphere(const int dimension, const int sample_points, const bool is_parall
  */
 int main(int argc, char **argv)
 {
+    if (argc == 1) {
+        std::cout << "Usage: ./hypersphere <max_omp_threads> [sphere_points] ['true' out to file] ['true' for graph]"
+                  << std::endl;
+        exit(1);
+    }
+
     unsigned int node_points = 1000;
     bool show_gui_graph = false;
+
+    // Redirect std::cout to file for future usages
+    std::ofstream out("hypersphere_output.txt");
+    std::streambuf *coutbuf = std::cout.rdbuf();
 
     // Set max threads if necessary
     if (argc >= 2) {
@@ -81,22 +96,23 @@ int main(int argc, char **argv)
         if (argc >= 3) {
             node_points = std::strtol(argv[2], nullptr, 10);
             if (argc >= 4) {
-                show_gui_graph = (strcmp(argv[3], "true") == 0);
+                if (strcmp(argv[3], "true") == 0) {
+                    std::cout.rdbuf(out.rdbuf());
+                }
+                if (argc >= 5) {
+                    show_gui_graph = (strcmp(argv[4], "true") == 0);
+                }
             }
         }
     } else {
         omp_set_num_threads(1);
     }
 
-    // Redirect std::cout to file for future usages
-    std::ofstream out("hypersphere_output.txt");
-    std::streambuf *coutbuf = std::cout.rdbuf();
-    std::cout.rdbuf(out.rdbuf());
-
     std::cout << "Using " << omp_get_max_threads() << " threads" << std::endl;
 
     // Holder to show the histogram
-    std::vector<std::vector<int>> histograms(15);
+    std::vector<std::vector<int>> histograms;
+    histograms.reserve(15);
 
     unsigned long run_time = 0;
     // Calculate histogram for non-parallel for timing
