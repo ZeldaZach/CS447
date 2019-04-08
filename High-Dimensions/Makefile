@@ -14,12 +14,12 @@ endif
 all: make_sphere make_segments
 
 make_sphere: sphere.cpp matplotlibcpp.h
-	$(CC) sphere.cpp $(FLAGS) $(PY_LIB) -fopenmp -o hypersphere
+	$(CC) sphere.cpp $(FLAGS) $(PY_LIB) -fopenmp -o assgn_2_1
 
 make_segments: segments.cpp
-	$(CC) segments.cpp $(FLAGS) -mavx2 -o linesegments
+	$(CC) segments.cpp $(FLAGS) -mavx2 -o assgn_2_2
 
 clean:
-	rm -f hypersphere linesegments
+	rm -f assgn_2_1 assgn_2_2
 
 .PHONY: make_sphere make_segments clean all

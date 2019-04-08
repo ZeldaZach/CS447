@@ -9,8 +9,17 @@ make
 
 ## Usage
 ```bash
-./hypersphere <Num Threads> <Num Points> <"true" for file, else display> <"true for graph, else nothing>
-./linesegments
+./assgn_2_1 <max_omp_threads> <sphere_points> <dimensions> <"file"> <"graph">
+./assgn_2_2
+```
+
+## Best tests
+```bash
+./assgn_2_1 8 1000000 16 file none    # standard solve
+./assgn_2_1 8 1000000 16 file graph   # +10 bonus points
+./assgn_2_1 8 1000000 50 file graph   # +15 bonus points
+
+./assgn_2_2  # standard solve
 ```
 
 ### Hypersphere References:

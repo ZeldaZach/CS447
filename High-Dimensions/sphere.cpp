@@ -24,11 +24,6 @@ sample_sphere(const int dimension, const int sample_points, const bool is_parall
     assert(dimension > 0);
 
     static thread_local unsigned int seed = time(nullptr);
-
-    // static thread_local std::mt19937 generator(std::chrono::system_clock::now().time_since_epoch().count());
-    // std::default_random_engine generator(std::chrono::system_clock::now().time_since_epoch().count());
-    // std::normal_distribution<> distribution(0.0, 1.0);
-
     std::vector<int> histogram(100);
 
     const auto begin = std::chrono::steady_clock::now();
@@ -78,12 +73,16 @@ sample_sphere(const int dimension, const int sample_points, const bool is_parall
 int main(int argc, char **argv)
 {
     if (argc == 1) {
-        std::cout << "Usage: ./hypersphere <max_omp_threads> [sphere_points] ['true' out to file] ['true' for graph]"
-                  << std::endl;
+        std::cout << "Usage: ./assgn2_1 <max_omp_threads> <sphere_points> <dimensions> <file> <graph>" << std::endl
+                  << "max_omp_threads\tMax threads to OMP parallel with (default 1)" << std::endl
+                  << "sphere_points\tHow many points to test per dimension (default 100,000)" << std::endl
+                  << "dimensions\tHow many dimensions to test up to (default 16)" << std::endl
+                  << "'file'\t\tPrint content to file or display" << std::endl
+                  << "'graph'\t\tShow histogram plot" << std::endl;
         exit(1);
     }
 
-    unsigned int node_points = 1000;
+    unsigned int node_points = 100000, max_dimensions = 16;
     bool show_gui_graph = false;
 
     // Redirect std::cout to file for future usages
@@ -96,11 +95,14 @@ int main(int argc, char **argv)
         if (argc >= 3) {
             node_points = std::strtol(argv[2], nullptr, 10);
             if (argc >= 4) {
-                if (strcmp(argv[3], "true") == 0) {
-                    std::cout.rdbuf(out.rdbuf());
-                }
+                max_dimensions = std::strtol(argv[3], nullptr, 10);
                 if (argc >= 5) {
-                    show_gui_graph = (strcmp(argv[4], "true") == 0);
+                    if (strcmp(argv[4], "file") == 0) {
+                        std::cout.rdbuf(out.rdbuf());
+                    }
+                    if (argc >= 6) {
+                        show_gui_graph = (strcmp(argv[5], "graph") == 0);
+                    }
                 }
             }
         }
@@ -112,7 +114,7 @@ int main(int argc, char **argv)
 
     // Holder to show the histogram
     std::vector<std::vector<int>> histograms;
-    histograms.reserve(15);
+    // histograms.reserve(50);
 
     unsigned long run_time = 0;
     // Calculate histogram for non-parallel for timing
@@ -123,7 +125,7 @@ int main(int argc, char **argv)
 
     // Calculate and plot the histogram (for parallel version)
     unsigned long p_run_time = 0;
-    for (int dimension = 2; dimension <= 16; dimension++) {
+    for (unsigned int dimension = 2; dimension <= max_dimensions; dimension++) {
         const auto histogram_and_time = sample_sphere(dimension, node_points, true);
         histograms.push_back(histogram_and_time.first);
         p_run_time += histogram_and_time.second;
@@ -135,6 +137,7 @@ int main(int argc, char **argv)
 
     // Create a histogram plot setup
     for (unsigned long i = 0; i < histograms.size(); i++) {
+        std::cout << i << std::endl;
         plt::named_plot(std::to_string(i + 2), histograms.at(i));
 
         std::cout << "\nDimension " << i + 2 << " Distance from center histogram" << std::endl;
