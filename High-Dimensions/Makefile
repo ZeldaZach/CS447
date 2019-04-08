@@ -1,5 +1,5 @@
 PY_LIB = -I/usr/include/python2.7 -I/usr/local/lib/python2.7/site-packages/numpy/core/include -DWITHOUT_NUMPY -lpython2.7
-FLAGS = -Wall -Wextra -pedantic -std=c++14 -O2
+FLAGS = -Wall -Wextra -pedantic -std=c++14 -O
 
 # Compiler chosen based on computer type
 UNAME := $(shell uname)
