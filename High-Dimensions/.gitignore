@@ -1,6 +1,7 @@
 .idea/
 *.dSYM/
 cmake-build-debug/
+venv/
 
 hypersphere
 linesegments
