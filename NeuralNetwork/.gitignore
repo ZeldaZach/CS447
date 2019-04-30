@@ -1,0 +1,4 @@
+.idea/
+cmake-build-*/
+a.out
+*.pgm
