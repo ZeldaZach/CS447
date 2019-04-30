@@ -1664,7 +1664,6 @@ run4() {
         std::shuffle(training.begin(), training.end(), eng);
 
         for (int r = 0; r < 600; r++) {
-
             if (r%100 == 0) {
                 // fprintf(stderr, "Begin predict...."); fflush(stderr);
                 int correct = 0;
@@ -1690,9 +1689,24 @@ run4() {
             // If in kernel, train has to be device function and all func that
             // train calls
             // __device function
+            float *training_images_cuda, *training_labels_cuda;
+            cudaMalloc(&training_images_cuda, sizeof(training_images));
+            cudaMalloc(&training_labels_cuda, sizeof(training_labels));
+
+            cudaMemcpy(training_images_cuda, training_images, sizeof(training_images), cudaMemcpyHostToDevice);
+            cudaMemcpy(training_labels_cuda, training_labels, sizeof(training_labels), cudaMemcpyHostToDevice);
+
             for (size_t i = 0; i < 100; i++) {
-                il.train(training_images[training.at(100*r + i)], training_labels[training.at(100*r + i)], 100);
+                il.train<<<10, 10>>>(training_images_cuda[training.at(100*r + i)], training_labels_cuda[training.at(100*r + 1)], 100);
+                //il.train(training_images[training.at(100*r + i)], training_labels[training.at(100*r + i)], 100);
             }
+
+            cudaMemcpy(training_images, training_images_cuda, sizeof(training_images), cudaMemcpyDeviceToHost);
+            cudaMemcpy(training_labels, training_labels_cuda, sizeof(training_labels), cudaMemcpyDeviceToHost);
+
+            cudaFree(training_images_cuda);
+            cudaFree(training_labels_cuda);
+
             il.update_weights(.002);
         }
     }
@@ -1932,7 +1946,7 @@ test3() {
 
         // cl2.check_downstream_derivative(training_labels[0]);
         // cl2.check_weight_derivative(training_labels[0]);
-        
+
         dl1.check_downstream_derivative(training_labels[0]);
         pl2.check_downstream_derivative(training_labels[0]);
 
