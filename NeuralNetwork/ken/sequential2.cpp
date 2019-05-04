@@ -114,104 +114,104 @@ operator<<(std::ostream &os, const Array<T, D3, D2, D1, D0> &a) {
 // General definition of template.
 template <typename T, size_t D, size_t... Ds>
 class Array {
-        friend std::ostream &operator<<<>(std::ostream &, const Array &);
-    public:
-        Array() = default;
-        template <typename U>
-        Array(const U &v) {
-            *this = v;
-        }
-        Array<T, Ds...> &operator[](const size_t i) {
-            assert(i < D);
-            return array[i];
-        }
-        const Array<T, Ds...> &operator[](const size_t i) const {
-            assert(i < D);
-            return array[i];
-        }
-        template <typename... Ts>
-        T &operator()(const size_t i, const Ts... rest) {
-            return (*this)[i](rest...);
-        }
-        template <typename... Ts>
-        const T &operator()(const size_t i, const Ts... rest) const {
-            return (*this)[i](rest...);
-        }
-        template <typename U>
-        Array &operator=(const U &v) {
-            std::fill(std::begin(array), std::end(array), v);
-            return *this;
-        }
-        template <typename U>
-        Array &operator=(const U (&a)[D]) {
-            std::copy(std::begin(a), std::end(a), std::begin(array));
-            return *this;
-        }
-        Array<T, Ds...> *begin() { return &array[0]; }
-        Array<T, Ds...> *end() { return &array[D]; }
-        const Array<T, Ds...> *begin() const { return &array[0]; }
-        const Array<T, Ds...> *end() const { return &array[D]; }
-    private:
-        Array<T, Ds...> array[D];
+    friend std::ostream &operator<<<>(std::ostream &, const Array &);
+public:
+    Array() = default;
+    template <typename U>
+    Array(const U &v) {
+        *this = v;
+    }
+    Array<T, Ds...> &operator[](const size_t i) {
+        assert(i < D);
+        return array[i];
+    }
+    const Array<T, Ds...> &operator[](const size_t i) const {
+        assert(i < D);
+        return array[i];
+    }
+    template <typename... Ts>
+    T &operator()(const size_t i, const Ts... rest) {
+        return (*this)[i](rest...);
+    }
+    template <typename... Ts>
+    const T &operator()(const size_t i, const Ts... rest) const {
+        return (*this)[i](rest...);
+    }
+    template <typename U>
+    Array &operator=(const U &v) {
+        std::fill(std::begin(array), std::end(array), v);
+        return *this;
+    }
+    template <typename U>
+    Array &operator=(const U (&a)[D]) {
+        std::copy(std::begin(a), std::end(a), std::begin(array));
+        return *this;
+    }
+    Array<T, Ds...> *begin() { return &array[0]; }
+    Array<T, Ds...> *end() { return &array[D]; }
+    const Array<T, Ds...> *begin() const { return &array[0]; }
+    const Array<T, Ds...> *end() const { return &array[D]; }
+private:
+    Array<T, Ds...> array[D];
 };
 
 // Base case.
 template <typename T, size_t D>
 class Array<T, D> {
-        friend std::ostream &operator<<<>(std::ostream &, const Array &);
-    public:
-        Array() = default;
-        template <typename U>
-        Array(const U &v) {
-            *this = v;
+    friend std::ostream &operator<<<>(std::ostream &, const Array &);
+public:
+    Array() = default;
+    template <typename U>
+    Array(const U &v) {
+        *this = v;
+    }
+    T &operator[](const size_t i) {
+#ifndef NDEBUG
+        if (i >= D) {
+            std::cerr << "Index " << i << " beyond end of array of size " << D << "." << std::endl;
+            assert(false);
+            abort();
         }
-        T &operator[](const size_t i) {
-            #ifndef NDEBUG
-            if (i >= D) {
-                std::cerr << "Index " << i << " beyond end of array of size " << D << "." << std::endl;
-                assert(false);
-                abort();
-            }
-            #endif
-            return array[i];
+#endif
+        return array[i];
+    }
+    const T&operator[](const size_t i) const {
+#ifndef NDEBUG
+        if (i >= D) {
+            std::cerr << "Index " << i << " beyond end of array of size " << D << "." << std::endl;
+            assert(false);
+            abort();
         }
-        const T&operator[](const size_t i) const {
-            #ifndef NDEBUG
-            if (i >= D) {
-                std::cerr << "Index " << i << " beyond end of array of size " << D << "." << std::endl;
-                assert(false);
-                abort();
-            }
-            #endif
-            return array[i];
-        }
-        T &operator()(const size_t i) {
-            return (*this)[i];
-        }
-        const T &operator()(const size_t i) const {
-            return (*this)[i];
-        }
-        template <typename U>
-        Array &operator=(const Array<U, D> &a) {
-            std::copy(std::begin(a), std::end(a), std::begin(array));
-            return *this;
-        }
-        template <typename U>
-        Array &operator=(const U (&a)[D]) {
-            std::copy(std::begin(a), std::end(a), std::begin(array));
-            return *this;
-        }
-        template <typename U>
-        Array &operator=(const U &v) {
-            std::fill(std::begin(array), std::end(array), v);
-            return *this;
-        }
-        T *begin() { return &array[0]; }
-        T *end() { return &array[D]; }
-        const T *begin() const { return &array[0]; }
-        const T *end() const { return &array[D]; }
-    private:
-        T array[D];
+#endif
+        return array[i];
+    }
+    T &operator()(const size_t i) {
+        return (*this)[i];
+    }
+    const T &operator()(const size_t i) const {
+        return (*this)[i];
+    }
+    template <typename U>
+    Array &operator=(const Array<U, D> &a) {
+        std::copy(std::begin(a), std::end(a), std::begin(array));
+        return *this;
+    }
+    template <typename U>
+    Array &operator=(const U (&a)[D]) {
+        std::copy(std::begin(a), std::end(a), std::begin(array));
+        return *this;
+    }
+    template <typename U>
+    Array &operator=(const U &v) {
+        std::fill(std::begin(array), std::end(array), v);
+        return *this;
+    }
+    T *begin() { return &array[0]; }
+    T *end() { return &array[D]; }
+    const T *begin() const { return &array[0]; }
+    const T *end() const { return &array[D]; }
+private:
+    T array[D];
 };
 
 // Conversion.
@@ -233,42 +233,42 @@ template <typename T> class HasOutputLayer;
 // Accepts input of the given dimensions.
 template <size_t IN_D, size_t IN_H, size_t IN_W>
 class HasInputLayer<Dims<IN_D, IN_H, IN_W>> {
-    public:
-        using InputDims = Dims<IN_D, IN_H, IN_W>;
-        using Input = typename ArrayDims<Precision, InputDims>::type;
-        HasInputLayer() : previous_layer(nullptr) {
-            // Help debugging.
-            downstream_deriv = std::numeric_limits<double>::signaling_NaN();
-        }
-        // Traing modifies and stores the output so that it can be used during backprop.  The last layer will
-        // call backprop backward through the layers.
-        virtual void train(const int label, const double minibatch_size) = 0;
-        virtual void update_weights(const float rate) = 0;
-        // Used for checking derivative numerically.
-        virtual double loss(const Input &in, const int label) = 0;
-        virtual int predict(const Input &) = 0;
+public:
+    using InputDims = Dims<IN_D, IN_H, IN_W>;
+    using Input = typename ArrayDims<Precision, InputDims>::type;
+    HasInputLayer() : previous_layer(nullptr) {
+        // Help debugging.
+        downstream_deriv = std::numeric_limits<double>::signaling_NaN();
+    }
+    // Traing modifies and stores the output so that it can be used during backprop.  The last layer will
+    // call backprop backward through the layers.
+    virtual void train(const int label, const double minibatch_size) = 0;
+    virtual void update_weights(const float rate) = 0;
+    // Used for checking derivative numerically.
+    virtual double loss(const Input &in, const int label) = 0;
+    virtual int predict(const Input &) = 0;
 
-    public:
-        HasOutputLayer<InputDims> *previous_layer;
-    protected:
-        // This is passed to the previous layer during backprop.  However, it could be created as simply a
-        // temporary array.  The only reason to keep it around is to check whether or not it has been computed
-        // correctly.  In other words, it's for debugging.
-        Input downstream_deriv;
+public:
+    HasOutputLayer<InputDims> *previous_layer;
+protected:
+    // This is passed to the previous layer during backprop.  However, it could be created as simply a
+    // temporary array.  The only reason to keep it around is to check whether or not it has been computed
+    // correctly.  In other words, it's for debugging.
+    Input downstream_deriv;
 };
 
 template <typename T> class HasOutputLayer;
 template <size_t OUT_D, size_t OUT_H, size_t OUT_W>
 class HasOutputLayer<Dims<OUT_D, OUT_H, OUT_W>> {
-    public:
-        using OutputDims = Dims<OUT_D, OUT_H, OUT_W>;
-        using Output = typename ArrayDims<Precision, OutputDims>::type;
-        HasOutputLayer() : next_layer(nullptr) {}
-        virtual void backprop(const Output &deriv, const double mb_size) = 0;
-    public:
-        HasInputLayer<OutputDims> *next_layer;
-        // Leave public for now so that we can debug easily.
-        Output output;
+public:
+    using OutputDims = Dims<OUT_D, OUT_H, OUT_W>;
+    using Output = typename ArrayDims<Precision, OutputDims>::type;
+    HasOutputLayer() : next_layer(nullptr) {}
+    virtual void backprop(const Output &deriv, const double mb_size) = 0;
+public:
+    HasInputLayer<OutputDims> *next_layer;
+    // Leave public for now so that we can debug easily.
+    Output output;
 };
 
 /*
@@ -277,35 +277,35 @@ class HasOutputLayer<Dims<OUT_D, OUT_H, OUT_W>> {
 
 template <typename OUT_DIMS>
 class InputLayer : public HasOutputLayer<OUT_DIMS> {
-    public:
-        using OutputIF = HasOutputLayer<OUT_DIMS>;
-        using typename OutputIF::Output;
-        constexpr static size_t OUT_D = OutputIF::OutputDims::D;
-        constexpr static size_t OUT_H = OutputIF::OutputDims::H;
-        constexpr static size_t OUT_W = OutputIF::OutputDims::W;
-        static_assert(OUT_D == 1);
-        static_assert(OUT_H >= 1);
-        static_assert(OUT_W >= 1);
-    public:
-        // This is not virtual, because only layers that have input have train() as part of their interface.
-        void train(const float (&image)[OUT_H][OUT_W], const int label, const double mb_size) {
-            this->output[0] = image;
-            this->next_layer->train(label, mb_size);
-        }
-        // Because it has output, this function must be defined, but there is no where to backprop to, so
-        // there is no need for it to do anything.
-        virtual void backprop(const Output &, const double) override { }
-        // This is not virtual, because only layers that have input have update_weights() as part of their
-        // interface.
-        void update_weights(const float rate) {
-            this->next_layer->update_weights(rate);
-        }
-        // This is not virtual, because only layers that have input have predict() as part of their interface.
-        int predict(const float (&image)[OUT_H][OUT_W]) {
-            Output output;
-            output[0] = image;
-            return this->next_layer->predict(output);
-        }
+public:
+    using OutputIF = HasOutputLayer<OUT_DIMS>;
+    using typename OutputIF::Output;
+    constexpr static size_t OUT_D = OutputIF::OutputDims::D;
+    constexpr static size_t OUT_H = OutputIF::OutputDims::H;
+    constexpr static size_t OUT_W = OutputIF::OutputDims::W;
+    static_assert(OUT_D == 1);
+    static_assert(OUT_H >= 1);
+    static_assert(OUT_W >= 1);
+public:
+    // This is not virtual, because only layers that have input have train() as part of their interface.
+    void train(const float (&image)[OUT_H][OUT_W], const int label, const double mb_size) {
+        this->output[0] = image;
+        this->next_layer->train(label, mb_size);
+    }
+    // Because it has output, this function must be defined, but there is no where to backprop to, so
+    // there is no need for it to do anything.
+    virtual void backprop(const Output &, const double) override { }
+    // This is not virtual, because only layers that have input have update_weights() as part of their
+    // interface.
+    void update_weights(const float rate) {
+        this->next_layer->update_weights(rate);
+    }
+    // This is not virtual, because only layers that have input have predict() as part of their interface.
+    int predict(const float (&image)[OUT_H][OUT_W]) {
+        Output output;
+        output[0] = image;
+        return this->next_layer->predict(output);
+    }
 };
 
 /*
@@ -314,72 +314,72 @@ class InputLayer : public HasOutputLayer<OUT_DIMS> {
 
 template <typename IN_DIMS, size_t N_FILTERS>
 class ConvolutionalLayer : public HasInputLayer<IN_DIMS>,
- public HasOutputLayer<Dims<N_FILTERS, IN_DIMS::H, IN_DIMS::W>> {
-        using InputIF = HasInputLayer<IN_DIMS>;
-        using OutputIF = HasOutputLayer<Dims<N_FILTERS, IN_DIMS::H, IN_DIMS::W>>;
-        using typename InputIF::Input;
-        using typename OutputIF::Output;
-        constexpr static size_t IN_D = InputIF::InputDims::D;
-        constexpr static size_t IN_H = InputIF::InputDims::H;
-        constexpr static size_t IN_W = InputIF::InputDims::W;
-        constexpr static size_t OUT_D = OutputIF::OutputDims::D;
-        constexpr static size_t OUT_H = OutputIF::OutputDims::H;
-        constexpr static size_t OUT_W = OutputIF::OutputDims::W;
-        static_assert(IN_D >= 1);
-        static_assert(IN_H >= 1);
-        static_assert(IN_W >= 1);
-        static_assert(OUT_D >= 1);
-        static_assert(OUT_H >= 1);
-        static_assert(OUT_W >= 1);
-        using Filter = Array<double, N_FILTERS, IN_D, FILTER_H, FILTER_W>;
-        using Bias = Array<double, N_FILTERS>;
+                           public HasOutputLayer<Dims<N_FILTERS, IN_DIMS::H, IN_DIMS::W>> {
+    using InputIF = HasInputLayer<IN_DIMS>;
+    using OutputIF = HasOutputLayer<Dims<N_FILTERS, IN_DIMS::H, IN_DIMS::W>>;
+    using typename InputIF::Input;
+    using typename OutputIF::Output;
+    constexpr static size_t IN_D = InputIF::InputDims::D;
+    constexpr static size_t IN_H = InputIF::InputDims::H;
+    constexpr static size_t IN_W = InputIF::InputDims::W;
+    constexpr static size_t OUT_D = OutputIF::OutputDims::D;
+    constexpr static size_t OUT_H = OutputIF::OutputDims::H;
+    constexpr static size_t OUT_W = OutputIF::OutputDims::W;
+    static_assert(IN_D >= 1);
+    static_assert(IN_H >= 1);
+    static_assert(IN_W >= 1);
+    static_assert(OUT_D >= 1);
+    static_assert(OUT_H >= 1);
+    static_assert(OUT_W >= 1);
+    using Filter = Array<double, N_FILTERS, IN_D, FILTER_H, FILTER_W>;
+    using Bias = Array<double, N_FILTERS>;
 
-    public:
+public:
 
-        // seed_seq is used to give each CL a different seed, so that we don't use the same initialization for
-        // every layer.
-        ConvolutionalLayer(const std::string &n, int seed_seq);
-        // This layer has no loss function, so will always call it's forward layer.  If it has no forward
-        // layer, that's a bug.
-        virtual void train(const int label, const double mb_size) override {
-            this->forward(this->previous_layer->output, m_filter, m_bias, this->output);
-            assert(this->next_layer != nullptr);
-            this->next_layer->train(label, mb_size);
-        }
-        virtual void update_weights(const float rate) override;
-        virtual int predict(const Input &in) override {
-            Output tmp_out;
-            this->forward(in, m_filter, m_bias, tmp_out);
-            return this->next_layer->predict(tmp_out);
-        }
-        virtual double loss(const Input &in, const int label) override {
-            Output tmp_out;
-            this->forward(in, m_filter, m_bias, tmp_out);
-            return this->next_layer->loss(tmp_out, label);
-        }
-        virtual void backprop(const Output &upstream_deriv, const double mb_size) override;
-        // Just saving this, not really needed.
-        void backprop_old1(const Output &upstream_deriv, const double mb_size);
-        // Do numerical check on weight derivative.
-        void check_weight_derivative(const int label);
-        // Do numerical check on downstream derivative.
-        void check_downstream_derivative(const int label);
+    // seed_seq is used to give each CL a different seed, so that we don't use the same initialization for
+    // every layer.
+    ConvolutionalLayer(const std::string &n, int seed_seq);
+    // This layer has no loss function, so will always call it's forward layer.  If it has no forward
+    // layer, that's a bug.
+    virtual void train(const int label, const double mb_size) override {
+        this->forward(this->previous_layer->output, m_filter, m_bias, this->output);
+        assert(this->next_layer != nullptr);
+        this->next_layer->train(label, mb_size);
+    }
+    virtual void update_weights(const float rate) override;
+    virtual int predict(const Input &in) override {
+        Output tmp_out;
+        this->forward(in, m_filter, m_bias, tmp_out);
+        return this->next_layer->predict(tmp_out);
+    }
+    virtual double loss(const Input &in, const int label) override {
+        Output tmp_out;
+        this->forward(in, m_filter, m_bias, tmp_out);
+        return this->next_layer->loss(tmp_out, label);
+    }
+    virtual void backprop(const Output &upstream_deriv, const double mb_size) override;
+    // Just saving this, not really needed.
+    void backprop_old1(const Output &upstream_deriv, const double mb_size);
+    // Do numerical check on weight derivative.
+    void check_weight_derivative(const int label);
+    // Do numerical check on downstream derivative.
+    void check_downstream_derivative(const int label);
 
-    private:
+private:
 
-        // Do the forward computation.  Note that this does not use anything directly from the object, and so
-        // is a static function.  The reason we don't use anything from the object is because we need to do
-        // this for many different reasons, such as checking the derivative.  In such case, we don't want to
-        // effect any change to the outputs, etc.
-        static void forward(const Input &input, const Filter &filter, const Bias &bias, Output &output);
+    // Do the forward computation.  Note that this does not use anything directly from the object, and so
+    // is a static function.  The reason we don't use anything from the object is because we need to do
+    // this for many different reasons, such as checking the derivative.  In such case, we don't want to
+    // effect any change to the outputs, etc.
+    static void forward(const Input &input, const Filter &filter, const Bias &bias, Output &output);
 
-    public:
+public:
 
-        const std::string m_name;
-        Filter m_filter;
-        Bias m_bias;
-        Array<double, N_FILTERS, IN_D, FILTER_H, FILTER_W> m_filter_deriv;
-        Array<double, N_FILTERS> m_bias_deriv;
+    const std::string m_name;
+    Filter m_filter;
+    Bias m_bias;
+    Array<double, N_FILTERS, IN_D, FILTER_H, FILTER_W> m_filter_deriv;
+    Array<double, N_FILTERS> m_bias_deriv;
 };
 
 template <typename IN_DIMS, size_t N_FILTERS>
@@ -406,7 +406,7 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::ConvolutionalLayer(const std::string &n,
     m_filter_deriv = 0;
     m_bias_deriv = 0;
 
-    #if 0
+#if 0
     // Test code.
     double x = 0;
     for (size_t g = 0; g < N_FILTERS; g++) {
@@ -421,7 +421,7 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::ConvolutionalLayer(const std::string &n,
     }
     m_filter_deriv = 0;
     m_bias_deriv = 0;
-    #endif
+#endif
 }
 
 template <typename IN_DIMS, size_t N_FILTERS>
@@ -501,14 +501,14 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::backprop(const Output &upstream_deriv, c
                                 const size_t in_i = out_i + f_i - PADDING;
                                 const size_t in_j = out_j + f_j - PADDING;
                                 this->downstream_deriv(f_h, in_i, in_j) +=
-                                 m_filter(f_g, f_h, f_i, f_j)*upstream_deriv(f_g, out_i, out_j);
+                                        m_filter(f_g, f_h, f_i, f_j)*upstream_deriv(f_g, out_i, out_j);
                                 /*
                                 fprintf(stderr, "layer %s, filter_deriv(%zu, %zu, %zu, %zu) added %f\n",
                                  m_name.c_str(), f_g, f_h, f_i, f_j, 
                                  input(f_h, in_i, in_j)*upstream_deriv(f_g, out_i, out_j)/mb_size);
                                 */
                                 m_filter_deriv(f_g, f_h, f_i, f_j) +=
-                                 input(f_h, in_i, in_j)*upstream_deriv(f_g, out_i, out_j)/mb_size;
+                                        input(f_h, in_i, in_j)*upstream_deriv(f_g, out_i, out_j)/mb_size;
                             }
                         }
                     }
@@ -556,9 +556,9 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::backprop_old1(const Output &upstream_der
                 const size_t f_end_i = std::min(ll_t(FILTER_H), ll_t(in_i) + PADDING + 1);
                 const size_t f_end_j = std::min(ll_t(FILTER_W), ll_t(in_j) + PADDING + 1);
                 fprintf(stderr, "Filter index ranges: in(%zu, %zu, %zu), i(%zu, %zu], j(%zu, %zu]\n",
-                 in_h, in_i, in_j,
-                 f_beg_i, f_end_i,
-                 f_beg_j, f_end_j
+                        in_h, in_i, in_j,
+                        f_beg_i, f_end_i,
+                        f_beg_j, f_end_j
                 );
                 assert(f_beg_i < FILTER_H);
                 assert(f_beg_j < FILTER_W);
@@ -573,17 +573,17 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::backprop_old1(const Output &upstream_der
                             assert(up_i < OUT_H);
                             assert(up_j < OUT_W);
                             fprintf(stderr, "Downstream: (%zu, %zu, %zu), filter %zu (%zu, %zu, %zu), upstream(%zu, %zu, %zu)\n",
-                             in_h, in_i, in_j,
-                             f_g, in_h, f_i, f_j,
-                             f_g, up_i, up_j);
+                                    in_h, in_i, in_j,
+                                    f_g, in_h, f_i, f_j,
+                                    f_g, up_i, up_j);
                             // Since it is going through a ReLU, if the output is not greater than 0, then
                             // the downstream derivative is 0.
                             if (this->output(f_g, up_i, up_j) > 0) {
                                 // Note that the output layer depth index is the index of the filter, not
                                 // the depth index of the filter.
                                 this->downstream_deriv(in_h, in_i, in_j)
-                                 += m_filter(f_g, in_h, f_i, f_j)
-                                 *upstream_deriv(f_g, up_i, up_j);
+                                        += m_filter(f_g, in_h, f_i, f_j)
+                                           *upstream_deriv(f_g, up_i, up_j);
                             }
                         }
                     }
@@ -622,24 +622,24 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::backprop_old1(const Output &upstream_der
                     // past the end.  Then we go back from that the number of pixels from the right end of the
                     // filter that we are at.  Then finally add one to be one past that.
                     fprintf(stderr, "%lld - %lld\n",
-                     (ll_t(IN_W) + PADDING - 1),
-                     (ll_t(FILTER_W) - (ll_t(f_j) - 1)));
+                            (ll_t(IN_W) + PADDING - 1),
+                            (ll_t(FILTER_W) - (ll_t(f_j) - 1)));
                     const size_t in_i_end = std::min(ll_t(IN_H) - 1, (ll_t(IN_H) + PADDING - 1) - (ll_t(FILTER_H) - ll_t(f_i) - 1)) + 1;
                     const size_t in_j_end = std::min(ll_t(IN_W) - 1, (ll_t(IN_W) + PADDING - 1) - (ll_t(FILTER_W) - ll_t(f_j) - 1)) + 1;
                     // fprintf(stderr, "WD: in_end(%zu, %zu)\n", in_i_end, in_j_end);
                     assert(in_i_end <= IN_H);
                     assert(in_j_end <= IN_W);
                     fprintf(stderr, "WD: filter(%zu, %zu, %zu, %zu) range over i[%zu, %zu), j[%zu, %zu)\n",
-                     f_g, f_h, f_i, f_j,
-                     in_i_begin, in_i_end,
-                     in_j_begin, in_j_end);
+                            f_g, f_h, f_i, f_j,
+                            in_i_begin, in_i_end,
+                            in_j_begin, in_j_end);
                     for (size_t in_i = in_i_begin; in_i < in_i_end; in_i++) {
                         for (size_t in_j = in_j_begin; in_j < in_j_end; in_j++) {
                             // Since it is going through a ReLU, if the output is not greater than 0, then
                             // the downstream derivative is 0.
                             if (this->output(f_g, in_i, in_j) > 0) {
                                 m_filter_deriv(f_g, f_h, f_i, f_j)
-                                 += input(f_h, in_i, in_j)*upstream_deriv(f_g, in_i, in_j)/mb_size;
+                                        += input(f_h, in_i, in_j)*upstream_deriv(f_g, in_i, in_j)/mb_size;
                             }
                         }
                     }
@@ -699,8 +699,8 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::check_weight_derivative(const int label)
                     double diff_deriv = m_filter_deriv(g, h, i, j);
                     if (derivative_error(numeric_deriv, diff_deriv) > 1E-6) {
                         fprintf(stderr, "WARNING: filter(%zu, %zu, %zu, %zu): numeric=%f, differentiated=%f\n", g, h, i, j,
-                         numeric_deriv,
-                         diff_deriv);
+                                numeric_deriv,
+                                diff_deriv);
                     }
                 }
             }
@@ -724,8 +724,8 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::check_weight_derivative(const int label)
         double diff_deriv = m_bias_deriv(g);
         if (derivative_error(numeric_deriv, diff_deriv) > 1E-6) {
             fprintf(stderr, "filter(%zu) bias derivative: numeric=%f, differentiated=%f\n", g,
-             numeric_deriv,
-             diff_deriv);
+                    numeric_deriv,
+                    diff_deriv);
         }
     }
 }
@@ -756,8 +756,8 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::check_downstream_derivative(const int la
                 double diff_deriv = this->downstream_deriv[in_h][in_i][in_j];
                 if (derivative_error(numeric_deriv, diff_deriv) > 1E-6) {
                     fprintf(stderr, "%lu, %lu, %lu: numeric=%f, differentiated=%f\n", in_h, in_i, in_j,
-                     numeric_deriv,
-                     this->downstream_deriv[in_h][in_i][in_j]);
+                            numeric_deriv,
+                            this->downstream_deriv[in_h][in_i][in_j]);
                 }
             }
         }
@@ -829,66 +829,66 @@ ConvolutionalLayer<IN_DIMS, N_FILTERS>::forward(const Input &input, const Filter
 
 template <typename IN_DIMS>
 class MaxPoolLayer : public HasInputLayer<IN_DIMS>,
- public HasOutputLayer<Dims<IN_DIMS::D, IN_DIMS::H/2, IN_DIMS::W/2>> {
+                     public HasOutputLayer<Dims<IN_DIMS::D, IN_DIMS::H/2, IN_DIMS::W/2>> {
 
-    public:
+public:
 
-        using InputIF = HasInputLayer<IN_DIMS>;
-        using OutputIF = HasOutputLayer<Dims<IN_DIMS::D, IN_DIMS::H/2, IN_DIMS::W/2>>;
-        using typename InputIF::Input;
-        using typename OutputIF::Output;
-        constexpr static size_t IN_D = InputIF::InputDims::D;
-        constexpr static size_t IN_H = InputIF::InputDims::H;
-        constexpr static size_t IN_W = InputIF::InputDims::W;
-        constexpr static size_t OUT_D = OutputIF::OutputDims::D;
-        constexpr static size_t OUT_H = OutputIF::OutputDims::H;
-        constexpr static size_t OUT_W = OutputIF::OutputDims::W;
-        static_assert(IN_D >= 1);
-        static_assert(IN_H >= 1);
-        static_assert(IN_W >= 1);
-        static_assert(OUT_D >= 1);
-        static_assert(OUT_H >= 1);
-        static_assert(OUT_W >= 1);
+    using InputIF = HasInputLayer<IN_DIMS>;
+    using OutputIF = HasOutputLayer<Dims<IN_DIMS::D, IN_DIMS::H/2, IN_DIMS::W/2>>;
+    using typename InputIF::Input;
+    using typename OutputIF::Output;
+    constexpr static size_t IN_D = InputIF::InputDims::D;
+    constexpr static size_t IN_H = InputIF::InputDims::H;
+    constexpr static size_t IN_W = InputIF::InputDims::W;
+    constexpr static size_t OUT_D = OutputIF::OutputDims::D;
+    constexpr static size_t OUT_H = OutputIF::OutputDims::H;
+    constexpr static size_t OUT_W = OutputIF::OutputDims::W;
+    static_assert(IN_D >= 1);
+    static_assert(IN_H >= 1);
+    static_assert(IN_W >= 1);
+    static_assert(OUT_D >= 1);
+    static_assert(OUT_H >= 1);
+    static_assert(OUT_W >= 1);
 
-        MaxPoolLayer(const std::string &n) : m_name(n) {}
+    MaxPoolLayer(const std::string &n) : m_name(n) {}
 
-        // This layer has no loss function, so will always call it's forward layer.  If it has no forward
-        // layer, that's a bug.
-        virtual void train(const int label, const double mb_size) override {
-            this->forward(this->previous_layer->output, this->output);
-            this->next_layer->train(label, mb_size);
-        }
+    // This layer has no loss function, so will always call it's forward layer.  If it has no forward
+    // layer, that's a bug.
+    virtual void train(const int label, const double mb_size) override {
+        this->forward(this->previous_layer->output, this->output);
+        this->next_layer->train(label, mb_size);
+    }
 
-        virtual void backprop(const Output &upstream_deriv, const double mb_size) override;
+    virtual void backprop(const Output &upstream_deriv, const double mb_size) override;
 
-        virtual void update_weights(const float rate) override {
-            // No weights/parameters in this layer.
-            this->next_layer->update_weights(rate);
-        }
+    virtual void update_weights(const float rate) override {
+        // No weights/parameters in this layer.
+        this->next_layer->update_weights(rate);
+    }
 
-        virtual double loss(const Input &in, const int label) override {
-            Output temp_output;
-            this->forward(in, temp_output);
-            return this->next_layer->loss(temp_output, label);
-        }
+    virtual double loss(const Input &in, const int label) override {
+        Output temp_output;
+        this->forward(in, temp_output);
+        return this->next_layer->loss(temp_output, label);
+    }
 
-        virtual int predict(const Input &in) override {
-            Output out;
-            this->forward(in, out);
-            return this->next_layer->predict(out);
-        }
+    virtual int predict(const Input &in) override {
+        Output out;
+        this->forward(in, out);
+        return this->next_layer->predict(out);
+    }
 
-        void check_downstream_derivative(const int label);
+    void check_downstream_derivative(const int label);
 
-    private:
+private:
 
-        // This can't be static because it saves the indices of the max for use by the backward pass.
-        void forward(const Input &input, Output &output);
+    // This can't be static because it saves the indices of the max for use by the backward pass.
+    void forward(const Input &input, Output &output);
 
-    private:
+private:
 
-        const std::string m_name;
-        Array<size_t, OUT_D, OUT_H, OUT_W> m_max_index_i, m_max_index_j;
+    const std::string m_name;
+    Array<size_t, OUT_D, OUT_H, OUT_W> m_max_index_i, m_max_index_j;
 };
 
 template <typename IN_DIMS>
@@ -901,7 +901,7 @@ MaxPoolLayer<IN_DIMS>::backprop(const Output &upstream_deriv, const double mb_si
         for (size_t out_i = 0; out_i < OUT_H; out_i++) {
             for (size_t out_j = 0; out_j < OUT_W; out_j++) {
                 this->downstream_deriv(out_h, m_max_index_i(out_h, out_i, out_j), m_max_index_j(out_h, out_i, out_j))
-                 = upstream_deriv(out_h, out_i, out_j);
+                        = upstream_deriv(out_h, out_i, out_j);
             }
         }
     }
@@ -934,9 +934,9 @@ MaxPoolLayer<IN_DIMS>::check_downstream_derivative(const int label) {
                 const double diff_deriv = this->downstream_deriv[in_h][in_i][in_j];
                 if (derivative_error(numeric_deriv, diff_deriv) > 1E-6) {
                     fprintf(stderr, "WARNING: %lu, %lu, %lu: input=%f, numeric=%f, differentiated=%f\n", in_h, in_i, in_j,
-                     input,
-                     numeric_deriv,
-                     diff_deriv);
+                            input,
+                            numeric_deriv,
+                            diff_deriv);
                 }
             }
         }
@@ -989,74 +989,74 @@ MaxPoolLayer<IN_DIMS>::forward(const Input &input, Output &output) {
 template <typename IN_DIMS, size_t N_NEURONS>
 class FullyConnectedLayer : public HasInputLayer<IN_DIMS>, public HasOutputLayer<Dims<1, 1, N_NEURONS>> {
 
-        using InputIF = HasInputLayer<IN_DIMS>;
-        using OutputIF = HasOutputLayer<Dims<1, 1, N_NEURONS>>;
-        using typename InputIF::Input;
-        using typename OutputIF::Output;
-        constexpr static size_t IN_D = InputIF::InputDims::D;
-        constexpr static size_t IN_H = InputIF::InputDims::H;
-        constexpr static size_t IN_W = InputIF::InputDims::W;
-        constexpr static size_t OUT_D = OutputIF::OutputDims::D;
-        constexpr static size_t OUT_H = OutputIF::OutputDims::H;
-        constexpr static size_t OUT_W = OutputIF::OutputDims::W;
-        static_assert(OUT_D == 1);
-        static_assert(OUT_H == 1);
+    using InputIF = HasInputLayer<IN_DIMS>;
+    using OutputIF = HasOutputLayer<Dims<1, 1, N_NEURONS>>;
+    using typename InputIF::Input;
+    using typename OutputIF::Output;
+    constexpr static size_t IN_D = InputIF::InputDims::D;
+    constexpr static size_t IN_H = InputIF::InputDims::H;
+    constexpr static size_t IN_W = InputIF::InputDims::W;
+    constexpr static size_t OUT_D = OutputIF::OutputDims::D;
+    constexpr static size_t OUT_H = OutputIF::OutputDims::H;
+    constexpr static size_t OUT_W = OutputIF::OutputDims::W;
+    static_assert(OUT_D == 1);
+    static_assert(OUT_H == 1);
 
-    public:
+public:
 
-        FullyConnectedLayer(const std::string &n, const bool relu, const double do_rate, const int seed_seq);
-        // This layer has no loss function, so will always call it's forward
-        // layer.  If it has no forward layer, that's a bug.
-        virtual void train(const int label, const double mb_size) override {
+    FullyConnectedLayer(const std::string &n, const bool relu, const double do_rate, const int seed_seq);
+    // This layer has no loss function, so will always call it's forward
+    // layer.  If it has no forward layer, that's a bug.
+    virtual void train(const int label, const double mb_size) override {
 
-            std::uniform_real_distribution<double> dist(0, 1);
-            
-            // Fill dropped array with either 0 if dropped, or 1/dropout_rate if not dropped, so that the
-            // expected value of the output is constant.
-            std::generate(m_current_kept.begin(), m_current_kept.end(),
-             [&]() { return dist(m_eng) < m_keep_prob ? 1/m_keep_prob : 0; });
-            
-            this->forward(this->previous_layer->output, this->m_weight, this->m_bias, this->m_current_kept, this->output);
-            this->next_layer->train(label, mb_size);
-        }
-        virtual void backprop(const Output &full_upstream_deriv, const double mb_size) override;
-        virtual void update_weights(const float rate) override;
-        void check_weight_derivative(const int label);
-        void check_downstream_derivative(const int label);
-        virtual double loss(const Input &in, const int label) override {
-            Output temp_output;
-            this->forward(in, this->m_weight, this->m_bias, this->m_all_kept, temp_output);
-            return this->next_layer->loss(temp_output, label);
-        }
-        virtual int predict(const Input &in) override {
-            Output out;
-            this->forward(in, this->m_weight, this->m_bias, this->m_all_kept, out);
-            return this->next_layer->predict(out);
-        }
+        std::uniform_real_distribution<double> dist(0, 1);
 
-    private:
+        // Fill dropped array with either 0 if dropped, or 1/dropout_rate if not dropped, so that the
+        // expected value of the output is constant.
+        std::generate(m_current_kept.begin(), m_current_kept.end(),
+                      [&]() { return dist(m_eng) < m_keep_prob ? 1/m_keep_prob : 0; });
 
-        // Could not make this static bcause it needed the m_relu flag.
-        void forward(const Input &input, const Array<Input, N_NEURONS> &weight, const Array<double, N_NEURONS> &bias, const Array<double, N_NEURONS> &dropped, Output &output);
+        this->forward(this->previous_layer->output, this->m_weight, this->m_bias, this->m_current_kept, this->output);
+        this->next_layer->train(label, mb_size);
+    }
+    virtual void backprop(const Output &full_upstream_deriv, const double mb_size) override;
+    virtual void update_weights(const float rate) override;
+    void check_weight_derivative(const int label);
+    void check_downstream_derivative(const int label);
+    virtual double loss(const Input &in, const int label) override {
+        Output temp_output;
+        this->forward(in, this->m_weight, this->m_bias, this->m_all_kept, temp_output);
+        return this->next_layer->loss(temp_output, label);
+    }
+    virtual int predict(const Input &in) override {
+        Output out;
+        this->forward(in, this->m_weight, this->m_bias, this->m_all_kept, out);
+        return this->next_layer->predict(out);
+    }
 
-    public:
+private:
 
-        const std::string m_name;
-        const bool m_relu;
-        Array<Input, N_NEURONS> m_weight;
-        Array<Input, N_NEURONS> m_weight_deriv;
-        Array<double, N_NEURONS> m_bias;
-        Array<double, N_NEURONS> m_bias_deriv;
-        const double m_keep_prob;
-        Array<double, N_NEURONS> m_current_kept;
-        const Array<double, N_NEURONS> m_all_kept;
+    // Could not make this static bcause it needed the m_relu flag.
+    void forward(const Input &input, const Array<Input, N_NEURONS> &weight, const Array<double, N_NEURONS> &bias, const Array<double, N_NEURONS> &dropped, Output &output);
 
-        std::default_random_engine m_eng;
+public:
+
+    const std::string m_name;
+    const bool m_relu;
+    Array<Input, N_NEURONS> m_weight;
+    Array<Input, N_NEURONS> m_weight_deriv;
+    Array<double, N_NEURONS> m_bias;
+    Array<double, N_NEURONS> m_bias_deriv;
+    const double m_keep_prob;
+    Array<double, N_NEURONS> m_current_kept;
+    const Array<double, N_NEURONS> m_all_kept;
+
+    std::default_random_engine m_eng;
 };
 
 template <typename IN_DIMS, size_t N_NEURONS>
 FullyConnectedLayer<IN_DIMS, N_NEURONS>::FullyConnectedLayer(const std::string &n, const bool relu, const double do_rate, const int seed_seq)
- : m_name(n), m_relu(relu), m_keep_prob(1 - do_rate), m_all_kept(1), m_eng(7389 + seed_seq) {
+        : m_name(n), m_relu(relu), m_keep_prob(1 - do_rate), m_all_kept(1), m_eng(7389 + seed_seq) {
 
     std::normal_distribution<double> init;
     // For each neuron, plane, row, and colum...
@@ -1116,8 +1116,8 @@ FullyConnectedLayer<IN_DIMS, N_NEURONS>::update_weights(const float rate) {
         for (size_t in_h = 0; in_h < IN_D; in_h++) {
             for (size_t in_i = 0; in_i < IN_H; in_i++) {
                 for (size_t in_j = 0; in_j < IN_W; in_j++) {
-                     m_weight[i](in_h, in_i, in_j) -= rate*m_weight_deriv[i](in_h, in_i, in_j);
-                     m_weight_deriv[i](in_h, in_i, in_j) = 0;
+                    m_weight[i](in_h, in_i, in_j) -= rate*m_weight_deriv[i](in_h, in_i, in_j);
+                    m_weight_deriv[i](in_h, in_i, in_j) = 0;
                 }
             }
         }
@@ -1166,8 +1166,8 @@ FullyConnectedLayer<IN_DIMS, N_NEURONS>::check_weight_derivative(const int label
                     const double diff_deriv = m_weight_deriv(n)(h, i, j);
                     if (derivative_error(numeric_deriv, diff_deriv) > 1E-6) {
                         fprintf(stderr, "WARNING: FC weight(%zu, %zu, %zu, %zu): numeric=%f, differentiated=%f\n", n, h, i, j,
-                         numeric_deriv,
-                         diff_deriv);
+                                numeric_deriv,
+                                diff_deriv);
                     }
                 }
             }
@@ -1189,8 +1189,8 @@ FullyConnectedLayer<IN_DIMS, N_NEURONS>::check_weight_derivative(const int label
         const double diff_deriv =  m_bias_deriv(n);
         if (derivative_error(numeric_deriv, diff_deriv) > 1E-6) {
             fprintf(stderr, "WARNING: FC bias(%zu) bias derivative: numeric=%f, differentiated=%f\n", n,
-             numeric_deriv,
-             diff_deriv);
+                    numeric_deriv,
+                    diff_deriv);
         }
     }
 }
@@ -1220,8 +1220,8 @@ FullyConnectedLayer<IN_DIMS, N_NEURONS>::check_downstream_derivative(const int l
                 const double diff_deriv = this->downstream_deriv[in_h][in_i][in_j];
                 if (derivative_error(numeric_deriv, diff_deriv) > 1E-6) {
                     fprintf(stderr, "%lu, %lu, %lu: numeric=%f, differentiated=%f\n", in_h, in_i, in_j,
-                     numeric_deriv,
-                     diff_deriv);
+                            numeric_deriv,
+                            diff_deriv);
                 }
             }
         }
@@ -1231,7 +1231,7 @@ FullyConnectedLayer<IN_DIMS, N_NEURONS>::check_downstream_derivative(const int l
 template <typename IN_DIMS, size_t N_NEURONS>
 void
 FullyConnectedLayer<IN_DIMS, N_NEURONS>::forward(const Input &input, const Array<Input, N_NEURONS> &weight, const Array<double, N_NEURONS> &bias,
- const Array<double, N_NEURONS> &dropped, Output &output) {
+                                                 const Array<double, N_NEURONS> &dropped, Output &output) {
     // Connect each neuron to everything.
     for (size_t i = 0; i < N_NEURONS; i++) {
         double &out(output[0][0][i]);
@@ -1268,45 +1268,45 @@ FullyConnectedLayer<IN_DIMS, N_NEURONS>::forward(const Input &input, const Array
 template <size_t N>
 class SoftmaxLayer : public HasInputLayer<Dims<1, 1, N>>, public HasOutputLayer<Dims<1, 1, N>> {
 
-        using InputIF = HasInputLayer<Dims<1, 1, N>>;
-        using OutputIF = HasOutputLayer<Dims<1, 1, N>>;
-        using typename InputIF::Input;
-        using typename OutputIF::Output;
+    using InputIF = HasInputLayer<Dims<1, 1, N>>;
+    using OutputIF = HasOutputLayer<Dims<1, 1, N>>;
+    using typename InputIF::Input;
+    using typename OutputIF::Output;
 
-    public:
+public:
 
-        // This layer has no loss function, so will always call it's forward layer.
-        // If it has no forward layer, that's a bug.
-        virtual void train(const int label, const double mb_size) override {
-            forward(this->previous_layer->output, this->output);
-            this->next_layer->train(label, mb_size);
+    // This layer has no loss function, so will always call it's forward layer.
+    // If it has no forward layer, that's a bug.
+    virtual void train(const int label, const double mb_size) override {
+        forward(this->previous_layer->output, this->output);
+        this->next_layer->train(label, mb_size);
+    }
+
+    virtual void backprop(const typename OutputIF::Output &full_upstream_deriv, const double mb_size) override;
+    virtual void update_weights(const float rate) override {
+        // No weights in this layer.
+        this->next_layer->update_weights(rate);
+    }
+    virtual double loss(const Input &in, const int label) override {
+        Output temp_output;
+        this->forward(in, temp_output);
+        return this->next_layer->loss(temp_output, label);
+    }
+    virtual int predict(const Input &in) override {
+        /*
+        std::cerr << "Predicting for: " << std::endl;
+        for (auto x : in[0][0]) {
+            std::cerr << x << std::endl;
         }
+        std::cerr << std::endl;
+        */
+        auto pos = std::max_element(std::begin(in[0][0]), std::end(in[0][0]));
+        return std::distance(std::begin(in[0][0]), pos);
+    }
 
-        virtual void backprop(const typename OutputIF::Output &full_upstream_deriv, const double mb_size) override;
-        virtual void update_weights(const float rate) override {
-            // No weights in this layer.
-            this->next_layer->update_weights(rate);
-        }
-        virtual double loss(const Input &in, const int label) override {
-            Output temp_output;
-            this->forward(in, temp_output);
-            return this->next_layer->loss(temp_output, label);
-        }
-        virtual int predict(const Input &in) override {
-            /*
-            std::cerr << "Predicting for: " << std::endl;
-            for (auto x : in[0][0]) {
-                std::cerr << x << std::endl;
-            }
-            std::cerr << std::endl;
-            */
-            auto pos = std::max_element(std::begin(in[0][0]), std::end(in[0][0]));
-            return std::distance(std::begin(in[0][0]), pos);
-        }
+private:
 
-    private:
-
-        static void forward(const Input &input, Output &output);
+    static void forward(const Input &input, Output &output);
 };
 
 template <size_t N>
@@ -1359,42 +1359,42 @@ SoftmaxLayer<N>::forward(const Input &input, Output &output) {
 
 template <size_t N>
 class CrossEntropyLayer : public HasInputLayer<Dims<1, 1, N>> {
-        using InputIF = HasInputLayer<Dims<1, 1, N>>;
-        using typename InputIF::Input;
-    public:
-        virtual void train(const int label, const double mb_size) override {
-            // Note that there is no actual need to calculate the loss at this point.
-            #pragma GCC diagnostic push
-            #pragma GCC diagnostic ignored "-Wunused-variable"
-            double loss = -log(this->previous_layer->output[0][0][label]);
-            #pragma GCC diagnostic pop
-            // fprintf(stderr, "loss: %f\n", loss);
-            Input deriv;
-            deriv = 0;
-            this->downstream_deriv = 0;
-            this->downstream_deriv[0][0][label] = -1/(this->previous_layer->output[0][0][label]);
-            this->previous_layer->backprop(this->downstream_deriv, mb_size);
-        }
-        virtual void update_weights(const float) override {
-            // No weights in this layer, and this layer has no output.
-        }
-        virtual double loss(const Input &in, const int label) override {
-            return -std::log(in[0][0][label]);
-        }
-        virtual int predict(const Input &) override {
-            assert(false);
-            return -1;
-        }
+    using InputIF = HasInputLayer<Dims<1, 1, N>>;
+    using typename InputIF::Input;
+public:
+    virtual void train(const int label, const double mb_size) override {
+        // Note that there is no actual need to calculate the loss at this point.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+        double loss = -log(this->previous_layer->output[0][0][label]);
+#pragma GCC diagnostic pop
+        // fprintf(stderr, "loss: %f\n", loss);
+        Input deriv;
+        deriv = 0;
+        this->downstream_deriv = 0;
+        this->downstream_deriv[0][0][label] = -1/(this->previous_layer->output[0][0][label]);
+        this->previous_layer->backprop(this->downstream_deriv, mb_size);
+    }
+    virtual void update_weights(const float) override {
+        // No weights in this layer, and this layer has no output.
+    }
+    virtual double loss(const Input &in, const int label) override {
+        return -std::log(in[0][0][label]);
+    }
+    virtual int predict(const Input &) override {
+        assert(false);
+        return -1;
+    }
 };
 
 void
 swap(int &i) {
     // Some of the & are superfluous.
     i =
-     (0xff&(i >> 24)) |
-     (0xff00&(i >> 8)) |
-     (0xff0000&(i << 8)) |
-     (0xff000000&(i << 24));
+            (0xff&(i >> 24)) |
+            (0xff00&(i >> 8)) |
+            (0xff0000&(i << 8)) |
+            (0xff000000&(i << 24));
 }
 
 int
@@ -1523,6 +1523,9 @@ run3() {
 
     static float training_images[60'000][28][28];
     read_mnist_images("mnist/train-images-idx3-ubyte", training_images);
+
+
+
     output_pgm("img0.pgm", training_images[0]);
     output_pgm("img59999.pgm", training_images[59999]);
 
@@ -1632,8 +1635,29 @@ run4() {
     output_pgm("img0.pgm", training_images[0]);
     output_pgm("img59999.pgm", training_images[59999]);
 
+    /*
+    std::ofstream out("real.txt");
+    for (int i = 0; i < 60'000; i++) {
+        for (int j = 0; j < 28; j++) {
+            for (int k = 0; k < 28; k++) {
+                out << training_images[i][j][k];
+            }
+            //out << "\n";
+        }
+        //out << "\n\n";
+    }
+    //exit(0);
+     */
+
     static unsigned char training_labels[60'000];
     read_mnist_labels("mnist/train-labels-idx1-ubyte", training_labels);
+
+    std::ofstream out2("real_labels.txt");
+    for (int i = 0; i < 60'000; i++) {
+        out2 << (unsigned int) training_labels[i] ;
+    }
+        //out << "\n\n";
+    exit(0);
     assert(training_labels[0] == 5);
     assert(training_labels[59'999] == 8);
 
@@ -1644,7 +1668,7 @@ run4() {
 
     static InputLayer<Dims<1, 28, 28>> il;
     static FullyConnectedLayer<Dims<1, 28, 28>, 1024> dl1("dl1", true, 0.4, 1);
-    static FullyConnectedLayer<Dims<1, 1, 1024>, 10> dl2("dl2", false, 0.0, 2);
+    static FullyConnectedLayer<Dims<1, 1, 1024>, 10> dl2("dl2", false, 0, 2);
     static SoftmaxLayer<10> sm;
     static CrossEntropyLayer<10> ce;
 
@@ -1656,7 +1680,7 @@ run4() {
     std::default_random_engine eng(9815);
     std::uniform_int_distribution<size_t> pick_test(0, 9'999);
 
-    for (int e = 0; e < 2; e++) {
+    for (int e = 0; e < 20; e++) {
         // Create shuffled sequence of training images.
         std::vector<int> training(60'000);
         std::iota(training.begin(), training.end(), 0);
@@ -1665,10 +1689,8 @@ run4() {
 
         for (int r = 0; r < 600; r++) {
             if (r%100 == 0) {
-                // fprintf(stderr, "Begin predict...."); fflush(stderr);
                 int correct = 0;
                 for (size_t i = 0; i < 10'000; i++) {
-                    // fprintf(stderr, "Predict: %d for %lu\n", il.predict(training_images[i]), i);
                     size_t ind = pick_test(eng);
                     if (il.predict(test_images[ind]) == test_labels[ind]) {
                         correct++;
@@ -1677,69 +1699,12 @@ run4() {
                 fprintf(stderr, "Epoch %d: Round %d: accuracy=%f\n", e, r, correct/10'000.0);
             }
 
-            /*
-            std::cerr << "Weights:" << std::endl;
-            for (size_t n = 0; n < 10; n++) {
-                std::cerr << "Neuron " << n << ":" << std::endl;
-                print(std::cout, dl.weight[n]);
-            }
-            */
-
-            // Make faster -- Guaranteed 100 entries, run on 10x10 cuda cores
-            // If in kernel, train has to be device function and all func that
-            // train calls
-            // __device function
-            float *training_images_cuda, *training_labels_cuda;
-            cudaMalloc(&training_images_cuda, sizeof(training_images));
-            cudaMalloc(&training_labels_cuda, sizeof(training_labels));
-
-            cudaMemcpy(training_images_cuda, training_images, sizeof(training_images), cudaMemcpyHostToDevice);
-            cudaMemcpy(training_labels_cuda, training_labels, sizeof(training_labels), cudaMemcpyHostToDevice);
-
             for (size_t i = 0; i < 100; i++) {
-                il.train<<<10, 10>>>(training_images_cuda[training.at(100*r + i)], training_labels_cuda[training.at(100*r + 1)], 100);
-                //il.train(training_images[training.at(100*r + i)], training_labels[training.at(100*r + i)], 100);
+                il.train(training_images[training.at(100*r + i)], training_labels[training.at(100*r + i)], 100);
             }
-
-            cudaMemcpy(training_images, training_images_cuda, sizeof(training_images), cudaMemcpyDeviceToHost);
-            cudaMemcpy(training_labels, training_labels_cuda, sizeof(training_labels), cudaMemcpyDeviceToHost);
-
-            cudaFree(training_images_cuda);
-            cudaFree(training_labels_cuda);
-
             il.update_weights(.002);
         }
     }
-
-    #if 0
-    for (int r = 0; r < 100'000; r++) {
-
-        if (r % 100 == 0) {
-
-            int correct = 0;
-            for (size_t i = 0; i < 100; i++) {
-                // fprintf(stderr, "Predict: %d for %lu\n", input.predict(training_images[i]), i);
-                if (input.predict(training_images[i]) == training_labels[i]) {
-                    correct++;
-                }
-            }
-            printf("Round %d: accuracy=%f\n", r, correct/100.0);
-        }
-
-        /*
-        std::cerr << "Weights:" << std::endl;
-        for (size_t n = 0; n < 10; n++) {
-            std::cerr << "Neuron " << n << ":" << std::endl;
-            print(std::cout, dl.weight[n]);
-        }
-        */
-
-        for (size_t i = 0; i < 100; i++) {
-            input.train(training_images[i], training_labels[i], 100);
-        }
-        input.update_weights(.001);
-    }
-    #endif
 }
 
 void run2();
@@ -2178,7 +2143,7 @@ run2() {
         }
     }
 
-    #if 0
+#if 0
     for (int r = 0; r < 100'000; r++) {
 
         if (r % 100 == 0) {
@@ -2206,7 +2171,7 @@ run2() {
         }
         input.update_weights(.001);
     }
-    #endif
+#endif
 }
 
 // vim: set tw=110:
