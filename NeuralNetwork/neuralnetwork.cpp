@@ -3,17 +3,35 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cuda.h>
+#include <cuda_runtime_api.h>
 #include <fstream>
 #include <iostream>
 #include <iterator>
 #include <set>
 #include <string>
+#include <vector>
+
+// At the top of your code.
+#define gpu_assert(rv) gpu_assert_h((rv), __FILE__, __LINE__)
+void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = true)
+{
+    if (code != cudaSuccess) {
+        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
+        if (abort)
+            exit(code);
+    }
+}
 
 const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training-report.dat";
 
 // Image constraints
-const int testing_samples = 10000, training_samples = 60000, image_width = 28, image_height = 28;
+const int testing_samples = 10'000, training_samples = 10'000, image_width = 28, image_height = 28;
+
+// imgs[60'000][image_width + 1][image_height + 1];
+std::vector<std::vector<std::vector<int>>> images(training_samples);
+std::vector<int> labels(training_samples);
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
@@ -25,15 +43,21 @@ const float epsilon = 1e-3;
 // read_image layer -> Hidden layer
 float *w1[input_nodes + 1], *delta1[input_nodes + 1], *out1;
 
+// Cuda vars
+float *cuda_w1[input_nodes + 1], *cuda_delta1[input_nodes + 1], *cuda_out1;
+
 // Hidden layer -> Output layer
 float *w2[hidden_nodes + 1], *delta2[hidden_nodes + 1], *ihidden_nodes, *out2, *theta2;
+
+// Cuda vars
+float *cuda_w2[hidden_nodes + 1], *cuda_delta2[hidden_nodes + 1], *cuda_ihidden_nodes, *cuda_out2, *cuda_theta2;
 
 // Output layer
 float *ioutput_nodes, *out3, *theta3;
 float expected[output_nodes + 1];
 
-// Image. In MNIST: 28x28 gray scale images.
-int img[image_width + 1][image_height + 1];
+float *cuda_ioutput_nodes, *cuda_out3, *cuda_theta3;
+float *cuda_expected[output_nodes + 1];
 
 // File stream to read data (image, label) and write down a report
 std::ifstream image;
@@ -223,38 +247,48 @@ int learning_process()
     return epochs;
 }
 
-// Read image
-int read_image()
+void read_images()
 {
-    // Reading image
     char number;
-    for (int j = 1; j <= image_height; ++j) {
-        for (int i = 1; i <= image_width; ++i) {
-            image.read(&number, sizeof(char));
-            if (number == 0) {
-                img[i][j] = 0;
-            } else {
-                img[i][j] = 1;
+
+    for (int image_number = 0; image_number < training_samples; image_number++) {
+        // Create image holders, set values to 0 by default
+        std::vector<std::vector<int>> tmp_img;
+        tmp_img.resize(image_width + 1);
+        for (auto &t : tmp_img) {
+            t.resize(image_height + 1);
+        }
+
+        for (int height = 1; height <= image_height; height++) {
+            for (int width = 1; width <= image_width; width++) {
+                image.read(&number, sizeof(char));
+                if (number == 0) {
+                    tmp_img.at(width).at(height) = 0;
+                } else {
+                    tmp_img.at(width).at(height) = 1;
+                }
             }
         }
+        images.at(image_number) = tmp_img;
+
+        // Read in label
+        label.read(&number, sizeof(char));
+        labels.at(image_number) = number;
     }
 
-    for (int j = 1; j <= image_height; ++j) {
-        for (int i = 1; i <= image_width; ++i) {
-            int pos = i + (j - 1) * image_width;
-            out1[pos] = img[i][j];
+    /*
+    int i = 0;
+    for (const auto &t : images) {
+        for (int height = 1; height <= image_height; height++) {
+            for (int width = 1; width <= image_width; width++) {
+                std::cout << t.at(width).at(height);
+            }
+            std::cout << std::endl;
         }
+        std::cout << labels.at(i++) << std::endl;
+        std::cout << std::endl << std::endl;
     }
-
-    // Reading label
-    label.read(&number, sizeof(char));
-    for (int i = 1; i <= output_nodes; ++i) {
-        expected[i] = 0.0;
-    }
-    expected[number + 1] = 1.0;
-
-    std::cout << "Label: " << (int)(number) << std::endl;
-    return (int)number;
+     */
 }
 
 void save_weights_to_file(std::string file_name)
@@ -282,11 +316,21 @@ void save_weights_to_file(std::string file_name)
 
 void training()
 {
-    for (int sample = 1; sample <= training_samples; ++sample) {
+    for (int sample = 0; sample < training_samples; ++sample) {
         std::cout << "Sample " << sample << std::endl;
 
         // Getting (image, label)
-        read_image();
+        for (int j = 1; j <= image_height; ++j) {
+            for (int i = 1; i <= image_width; ++i) {
+                int pos = i + (j - 1) * image_width;
+                out1[pos] = images.at(sample).at(i).at(j);
+            }
+        }
+
+        for (int i = 1; i <= output_nodes; ++i) {
+            expected[i] = 0.0;
+        }
+        expected[labels.at(sample) + 1] = 1.0;
 
         // Learning process: forward_learning (Forward procedure) - Back propagation
         int nIterations = learning_process();
@@ -294,7 +338,7 @@ void training()
         // Write down the squared error
         std::cout << "Iterations: " << nIterations << std::endl;
         printf("Error: %0.6lf\n\n", square_error());
-        report << "Sample " << sample << ": Iterations = " << nIterations << ", Error = " << square_error()
+        report << "Sample " << sample + 1 << ": Iterations = " << nIterations << ", Error = " << square_error()
                << std::endl;
 
         // Save the current network (weights) every so often
@@ -312,11 +356,23 @@ void testing()
     load_model_from_backup(model_fn); // Load model (weight matrices) of a trained Neural Network
 
     int nCorrect = 0;
-    for (int sample = 1; sample <= testing_samples; ++sample) {
+    for (int sample = 0; sample < testing_samples; ++sample) {
         std::cout << "Sample " << sample << std::endl;
 
         // Getting (image, label)
-        int label = read_image();
+        for (int j = 1; j <= image_height; ++j) {
+            for (int i = 1; i <= image_width; ++i) {
+                int pos = i + (j - 1) * image_width;
+                out1[pos] = images.at(sample).at(i).at(j);
+            }
+        }
+
+        for (int i = 1; i <= output_nodes; ++i) {
+            expected[i] = 0.0;
+        }
+        expected[labels.at(sample) + 1] = 1.0;
+
+        int label = labels.at(sample); // read_image();
 
         // Classification - forward_learning procedure
         forward_learning();
@@ -385,8 +441,17 @@ int main(int argc, char **argv)
     init_nn_matrices();
 
     if (will_train) {
-        image.open("mnist/train-images.idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
-        label.open("mnist/train-labels.idx1-ubyte", std::ios::in | std::ios::binary); // Binary label file
+        image.open("mnist/train-images-idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
+        label.open("mnist/train-labels-idx1-ubyte", std::ios::in | std::ios::binary); // Binary label file
+
+        if (!image.is_open()) {
+            std::cout << "MNIST training images not loaded" << std::endl;
+            exit(1);
+        }
+        if (!label.is_open()) {
+            std::cout << "MNIST labels not loaded" << std::endl;
+            exit(1);
+        }
 
         // Reading file headers
         char number;
@@ -396,11 +461,18 @@ int main(int argc, char **argv)
         for (int i = 1; i <= 8; ++i) {
             label.read(&number, sizeof(char));
         }
+
+        // Read images all at once, into memory (cuda memory)
+        // Then we can access vai index in the read_image method
+        // From there,
+
+        // Read all images & labels into memory
+        read_images();
         training();
     }
     if (will_test) {
-        image.open("mnist/t10k-images.idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
-        label.open("mnist/t10k-labels.idx1-ubyte", std::ios::in | std::ios::binary); // Binary label file
+        image.open("mnist/t10k-images-idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
+        label.open("mnist/t10k-labels-idx1-ubyte", std::ios::in | std::ios::binary); // Binary label file
 
         // Reading file headers
         char number;
@@ -410,6 +482,8 @@ int main(int argc, char **argv)
         for (int i = 1; i <= 8; ++i) {
             label.read(&number, sizeof(char));
         }
+
+        read_images();
         testing();
     }
 
