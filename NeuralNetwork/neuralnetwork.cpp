@@ -470,8 +470,6 @@ int main(int argc, char **argv)
     }
 
     report.close();
-    image.close();
-    label.close();
 
     return 0;
 }
