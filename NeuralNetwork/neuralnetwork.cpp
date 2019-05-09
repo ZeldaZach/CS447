@@ -1,14 +1,9 @@
-#include <algorithm>
 #include <cmath>
-#include <cstdio>
-#include <cstdlib>
 #include <cstring>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
 #include <fstream>
 #include <iostream>
-#include <iterator>
-#include <set>
 #include <string>
 #include <vector>
 
