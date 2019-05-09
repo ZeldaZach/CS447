@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstdio>
 #include <cstring>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
@@ -7,7 +8,6 @@
 #include <string>
 #include <vector>
 
-/*
 #define gpu_assert(rv) gpu_assert_h((rv), __FILE__, __LINE__)
 void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = true)
 {
@@ -18,34 +18,38 @@ void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = tru
         }
     }
 }
-*/
 
 // Output files
 const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training_report.txt";
 
 // Data constraints
-const int testing_samples = 10'000, training_samples = 60'000, image_width = 28, image_height = 28;
+const int testing_samples = 10'000, training_samples = 500, image_width = 28, image_height = 28;
+
+// Neural network constraints
+const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
+const int epochs = 512;
+
+// const floats, accessible from both host/device this way
+#define learning_rate 0.001
+#define momentum 0.9
+#define epsilon 0.001
 
 // Data containers
 std::vector<std::vector<int>> images_2d;
 int *images, *labels;
 
-// Neural network constraints
-const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
-const int epochs = 512;
-const float learning_rate = 0.001, momentum = 0.9, epsilon = 0.001;
-
 // Input layer -> Hidden layer
 float w1[input_nodes * hidden_nodes];
-float delta1[input_nodes * hidden_nodes], out1[input_nodes];
+__device__ float delta1[input_nodes * hidden_nodes], out1[input_nodes];
 
 // Hidden layer -> Output layer
 float w2[hidden_nodes * output_nodes];
-float delta2[hidden_nodes * output_nodes], ihidden_nodes[hidden_nodes], out2[hidden_nodes], theta2[hidden_nodes];
+__device__ float delta2[hidden_nodes * output_nodes], ihidden_nodes[hidden_nodes];
+__device__ float out2[hidden_nodes], theta2[hidden_nodes];
 
 // Output layer
-float ioutput_nodes[output_nodes], out3[output_nodes], theta3[output_nodes], expected[output_nodes];
+__device__ float ioutput_nodes[output_nodes], out3[output_nodes], theta3[output_nodes], expected[output_nodes];
 
 // File stream to read/write data
 std::ifstream image, label;
@@ -99,7 +103,7 @@ void load_model_from_backup(std::string file_name)
     std::ifstream file(file_name, std::ios::in);
 
     if (!file.is_open()) {
-        std::cout << "Unable to open matrix file" << std::endl;
+        printf("Unable to open matrix file\n");
         exit(1);
     }
 
@@ -120,13 +124,13 @@ void load_model_from_backup(std::string file_name)
     file.close();
 }
 
-float activation_function(float x)
+__device__ float activation_function(float x)
 {
     // SIGMOID
     return 1.0 / (1.0 + exp(-x));
 }
 
-void forward_learning()
+__device__ void forward_learning(float *w1, float *w2)
 {
     for (int i = 0; i < hidden_nodes; ++i) {
         ihidden_nodes[i] = 0.0;
@@ -158,7 +162,7 @@ void forward_learning()
 }
 
 // Normalize error
-float square_error()
+__device__ float square_error()
 {
     float res = 0.0;
     for (int i = 0; i < output_nodes; ++i) {
@@ -168,7 +172,7 @@ float square_error()
     return res;
 }
 
-void back_propagation()
+__device__ void back_propagation(float *w1, float *w2)
 {
     float sum;
 
@@ -188,7 +192,9 @@ void back_propagation()
         for (int j = 0; j < output_nodes; ++j) {
             delta2[i * output_nodes + j] =
                 (learning_rate * theta3[j] * out2[i]) + (momentum * delta2[i * output_nodes + j]);
-            w2[i * output_nodes + j] += delta2[i * output_nodes + j];
+
+            atomicAdd(&w2[i * output_nodes + j], delta2[i * output_nodes + j]);
+            // w2[i * output_nodes + j] += delta2[i * output_nodes + j];
         }
     }
 
@@ -196,12 +202,14 @@ void back_propagation()
         for (int j = 0; j < hidden_nodes; j++) {
             delta1[i * hidden_nodes + j] =
                 (learning_rate * theta2[j] * out1[i]) + (momentum * delta1[i * hidden_nodes + j]);
-            w1[i * hidden_nodes + j] += delta1[i * hidden_nodes + j];
+
+            atomicAdd(&w1[i * hidden_nodes + j], delta1[i * hidden_nodes + j]);
+            // w1[i * hidden_nodes + j] += delta1[i * hidden_nodes + j];
         }
     }
 }
 
-int learning_process()
+__device__ int learning_process(float *w1, float *w2)
 {
     // Initialize delta arrays
     for (int i = 0; i < input_nodes; ++i) {
@@ -217,8 +225,8 @@ int learning_process()
     }
 
     for (int i = 0; i < epochs; ++i) {
-        forward_learning();
-        back_propagation();
+        forward_learning(w1, w2);
+        back_propagation(w1, w2);
         if (square_error() < epsilon) {
             return i;
         }
@@ -281,54 +289,56 @@ void save_weights_to_file(std::string file_name)
     file.close();
 }
 
-void training(float *, float *)
+__global__ void training(float *w1, float *w2, int *images, int *labels)
 {
-    // int sample = blockIdx.x*blockDim.x+threadIdx.x;
+    int sample = blockIdx.x * blockDim.x + threadIdx.x;
 
-    for (int sample = 0; sample < training_samples; ++sample) {
-        // std::cout << "Sample " << sample << std::endl;
+    if (sample % 100 == 0) {
         printf("Sample %d\n", sample);
-
-        // Getting (image, label)
-        for (int j = 0; j < image_height; ++j) {
-            for (int i = 0; i < image_width; ++i) {
-                const int pos = j * image_width + i;
-                out1[pos] = images[sample * input_nodes + pos];
-            }
-        }
-
-        for (int i = 0; i < output_nodes; ++i) {
-            expected[i] = 0.0;
-        }
-        expected[labels[sample]] = 1.0;
-
-        // Learning process: forward_learning (Forward procedure) - Back propagation
-        int nIterations = learning_process();
-
-        // Write down the squared error
-        std::cout << "Iterations: " << nIterations << std::endl;
-        printf("Error: %0.6lf\n\n", square_error());
-        // report << "Sample " << sample + 1 << ": Iterations = " << nIterations << ", Error = " << square_error()
-        //       << std::endl;
-
-        // Save the current network (weights) every so often
-        // if (sample % 100 == 0) {
-        //    save_weights_to_file(model_fn);
-        //}
     }
 
+    // Getting (image, label)
+    for (int j = 0; j < image_height; ++j) {
+        for (int i = 0; i < image_width; ++i) {
+            const int pos = j * image_width + i;
+            out1[pos] = images[sample * input_nodes + pos];
+        }
+    }
+
+    for (int i = 0; i < output_nodes; ++i) {
+        expected[i] = 0.0;
+    }
+    expected[labels[sample]] = 1.0;
+
+    // Learning process: forward_learning (Forward procedure) - Back propagation
+    int nIterations = learning_process(w1, w2);
+
+    if (sample % 100 == 0) {
+        // Write down the squared error
+        printf("Iterations: %d\n", nIterations);
+        printf("Error: %0.6lf\n\n", square_error());
+    }
+    // report << "Sample " << sample + 1 << ": Iterations = " << nIterations << ", Error = " << square_error()
+    //       << std::endl;
+
+    // Save the current network (weights) every so often
+    // if (sample % 100 == 0) {
+    //    save_weights_to_file(model_fn);
+    //}
+
     // Save the final network
-    save_weights_to_file(model_fn);
+    // save_weights_to_file(model_fn);
 }
 
-void testing()
+__global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCorrect)
 {
-    // Load model (weight matrices) of a trained Neural Network
-    load_model_from_backup(model_fn);
+    // int id = blockIdx.x * blockDim.x + threadIdx.x;
 
-    int nCorrect = 0;
+    *nCorrect = 0;
     for (int sample = 0; sample < testing_samples; ++sample) {
-        std::cout << "Sample " << sample << std::endl;
+        if (sample % 100 == 0) {
+            printf("Sample %d\n", sample);
+        }
 
         // Getting (image, label)
         for (int j = 0; j < image_height; ++j) {
@@ -341,12 +351,12 @@ void testing()
         for (int i = 0; i < output_nodes; ++i) {
             expected[i] = 0.0;
         }
-        expected[labels[sample]] = 1.0;
+        expected[(int)labels[sample]] = 1.0;
 
         int label = labels[sample]; // read_image();
 
         // Classification - forward_learning procedure
-        forward_learning();
+        forward_learning(w1, w2);
 
         // Prediction
         int predict = 0;
@@ -361,25 +371,22 @@ void testing()
         printf("Error: %0.6lf\n", error);
 
         if (label == predict) {
-            ++nCorrect;
-            std::cout << "Classification: YES. Label = " << label << ". Predict = " << predict << std::endl
-                      << std::endl;
-            report << "Sample " << sample << ": YES. Label = " << label << ". Predict = " << predict
-                   << ". Error = " << error << std::endl;
+            ++*nCorrect;
+            printf("Classification: YES. Label = %d. Prediction = %d\n", label, predict);
+            // printf("Sample %d: YES. Label = %d. Prediction = %d\n", sample, label, predict);
         } else {
-            std::cout << "Classification: NO.  Label = " << label << ". Predict = " << predict << std::endl;
-            report << "Sample " << sample << ": NO.  Label = " << label << ". Predict = " << predict
-                   << ". Error = " << error << std::endl;
+            printf("Classification: NO. Label = %d. Prediction = %d\n", label, predict);
+            // printf("Sample %d: NO. Label = %d. Prediction = %d\n", sample, label, predict);
         }
     }
 
     // Summary
-    float accuracy = (float)(nCorrect) / testing_samples * 100.0;
-    std::cout << "Number of correct samples: " << nCorrect << " / " << testing_samples << std::endl;
+    float accuracy = (float)(*nCorrect) / testing_samples * 100.0;
+    printf("Number of correct samples: %d/%d\n", *nCorrect, testing_samples);
     printf("Accuracy: %0.2lf\n", accuracy);
 
-    report << "Number of correct samples: " << nCorrect << " / " << testing_samples << std::endl;
-    report << "Accuracy: " << accuracy << std::endl;
+    // report << "Number of correct samples: " << nCorrect << " / " << testing_samples << std::endl;
+    // report << "Accuracy: " << accuracy << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -442,7 +449,34 @@ int main(int argc, char **argv)
         label.close();
 
         images = vectorToArray<int>(images_2d);
-        training(nullptr, nullptr);
+
+        // CUDA MALLOCS
+        float *cuda_w1, *cuda_w2;
+        int *cuda_images, *cuda_labels;
+
+        cudaMalloc(&cuda_w1, input_nodes * hidden_nodes * sizeof(float));
+        cudaMalloc(&cuda_w2, hidden_nodes * output_nodes * sizeof(float));
+        cudaMalloc(&cuda_images, images_2d.size() * images_2d[0].size() * sizeof(int));
+        cudaMalloc(&cuda_labels, images_2d.size() * sizeof(int));
+
+        cudaMemcpy(cuda_w1, w1, hidden_nodes * output_nodes * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_w2, w2, input_nodes * hidden_nodes * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_images, images, images_2d.size() * images_2d[0].size() * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_labels, labels, images_2d.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+        training<<<60, 1000>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels);
+        cudaDeviceSynchronize();
+
+        cudaMemcpy(w1, cuda_w1, hidden_nodes * output_nodes * sizeof(float), cudaMemcpyDeviceToHost);
+        cudaMemcpy(w2, cuda_w2, input_nodes * hidden_nodes * sizeof(float), cudaMemcpyDeviceToHost);
+
+        save_weights_to_file(model_fn);
+
+        cudaFree(cuda_w1);
+        cudaFree(cuda_w2);
+        cudaFree(cuda_images);
+        cudaFree(cuda_labels);
+
         delete[] images;
         delete[] labels;
     }
@@ -464,7 +498,38 @@ int main(int argc, char **argv)
         label.close();
 
         images = vectorToArray<int>(images_2d);
-        testing();
+
+        // Load model (weight matrices) of a trained Neural Network
+        load_model_from_backup(model_fn);
+
+        // CUDA MALLOCS
+        float *cuda_w1, *cuda_w2;
+        int *cuda_images, *cuda_labels, *cuda_num_correct;
+
+        cudaMalloc(&cuda_w1, input_nodes * hidden_nodes * sizeof(float));
+        cudaMalloc(&cuda_w2, hidden_nodes * output_nodes * sizeof(float));
+        cudaMalloc(&cuda_images, images_2d.size() * images_2d[0].size() * sizeof(int));
+        cudaMalloc(&cuda_labels, images_2d.size() * sizeof(int));
+        cudaMalloc(&cuda_num_correct, sizeof(int));
+
+        cudaMemcpy(cuda_w1, w1, hidden_nodes * output_nodes * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_w2, w2, input_nodes * hidden_nodes * sizeof(float), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_images, images, images_2d.size() * images_2d[0].size() * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_labels, labels, images_2d.size() * sizeof(int), cudaMemcpyHostToDevice);
+
+        testing<<<1, 1>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
+        cudaDeviceSynchronize();
+
+        int *result = new int(3);
+        cudaMemcpy(result, cuda_num_correct, sizeof(int), cudaMemcpyDeviceToHost);
+
+        printf("Total %d\n", *result);
+
+        cudaFree(cuda_w1);
+        cudaFree(cuda_w2);
+        cudaFree(cuda_images);
+        cudaFree(cuda_labels);
+
         delete[] images;
         delete[] labels;
     }
