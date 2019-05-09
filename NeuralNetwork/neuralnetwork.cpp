@@ -29,7 +29,7 @@ const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training_report.txt";
 
 // Image constraints
-const int testing_samples = 10'000, training_samples = 500, image_width = 28, image_height = 28;
+const int testing_samples = 10'000, training_samples = 60'000, image_width = 28, image_height = 28;
 
 // imgs[60'000][image_width * image_height];
 std::vector<std::vector<int>> images_2d;
@@ -452,10 +452,9 @@ int main(int argc, char **argv)
         label.close();
 
         images = vectorToArray<int>(images_2d);
-
-        // cudaMemcpy(w1, w1, sizeof(float) * (input_nodes + 1), cudaMemcpyHostToDevice);
-        // training<<<60, 1000>>>(w1, w2);
         training(nullptr, nullptr);
+        delete[] images;
+        delete[] labels;
     }
     if (will_test) {
         image.open("mnist/t10k-images-idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
@@ -476,6 +475,8 @@ int main(int argc, char **argv)
 
         images = vectorToArray<int>(images_2d);
         testing();
+        delete[] images;
+        delete[] labels;
     }
 
     report.close();
