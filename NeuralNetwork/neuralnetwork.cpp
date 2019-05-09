@@ -8,39 +8,35 @@
 #include <vector>
 
 /*
-// At the top of your code.
 #define gpu_assert(rv) gpu_assert_h((rv), __FILE__, __LINE__)
 void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = true)
 {
     if (code != cudaSuccess) {
         fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort)
+        if (abort) {
             exit(code);
+        }
     }
 }
- */
+*/
 
+// Output files
 const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training_report.txt";
 
-// Image constraints
+// Data constraints
 const int testing_samples = 10'000, training_samples = 60'000, image_width = 28, image_height = 28;
 
-// imgs[60'000][image_width * image_height];
+// Data containers
 std::vector<std::vector<int>> images_2d;
-// std::vector<int> labels;
-
-int *images;
-int *labels;
+int *images, *labels;
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
 const int epochs = 512;
-const float learning_rate = 0.001;
-const float momentum = 0.9;
-const float epsilon = 0.001;
+const float learning_rate = 0.001, momentum = 0.9, epsilon = 0.001;
 
-// read_image layer -> Hidden layer
+// Input layer -> Hidden layer
 float w1[input_nodes * hidden_nodes];
 float delta1[input_nodes * hidden_nodes], out1[input_nodes];
 
@@ -49,10 +45,9 @@ float w2[hidden_nodes * output_nodes];
 float delta2[hidden_nodes * output_nodes], ihidden_nodes[hidden_nodes], out2[hidden_nodes], theta2[hidden_nodes];
 
 // Output layer
-float ioutput_nodes[output_nodes], out3[output_nodes], theta3[output_nodes];
-float expected[output_nodes];
+float ioutput_nodes[output_nodes], out3[output_nodes], theta3[output_nodes], expected[output_nodes];
 
-// File stream to read data (image, label) and write down a report
+// File stream to read/write data
 std::ifstream image, label;
 std::ofstream report;
 
@@ -76,7 +71,7 @@ void project_details()
 
 void init_nn_matrices()
 {
-    // Initialization of weights from read_image layer to Hidden layer
+    // Initialization of weights from Input layer to Hidden layer
     for (int i = 0; i < input_nodes; ++i) {
         for (int j = 0; j < hidden_nodes; ++j) {
             int sign = rand() % 2;
