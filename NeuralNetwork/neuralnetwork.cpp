@@ -31,9 +31,12 @@ const char *report_fn = "training_report.txt";
 // Image constraints
 const int testing_samples = 10'000, training_samples = 500, image_width = 28, image_height = 28;
 
-// imgs[60'000][image_width + 1][image_height + 1];
-std::vector<std::vector<std::vector<int>>> images;
-std::vector<int> labels;
+// imgs[60'000][image_width * image_height];
+std::vector<std::vector<int>> images_2d;
+// std::vector<int> labels;
+
+int *images;
+int *labels;
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
@@ -57,6 +60,14 @@ float expected[output_nodes];
 // File stream to read data (image, label) and write down a report
 std::ifstream image, label;
 std::ofstream report;
+
+template <typename T> T *vectorToArray(std::vector<std::vector<T>> const &v)
+{
+    T *rv = (T *)malloc((v.size() * v[0].size()) * sizeof(T)); // Assuming all rows have the same size
+    for (unsigned i = 0; i < v.size(); i++)
+        memcpy(rv + v[i].size() * i, &(v[i][0]), v[i].size() * sizeof(T));
+    return rv;
+}
 
 void project_details()
 {
@@ -229,49 +240,32 @@ void read_images(int sample_count)
 {
     char number;
 
-    images.clear();
-    labels.clear();
-    images.resize(sample_count);
-    labels.resize(sample_count);
+    delete labels;
+    labels = new int[sample_count];
+    images_2d.clear();
+    images_2d.resize(sample_count);
 
     for (int image_number = 0; image_number < sample_count; image_number++) {
         // Create image holders, set values to 0 by default
-        std::vector<std::vector<int>> tmp_img;
-        tmp_img.resize(image_width);
-        for (auto &t : tmp_img) {
-            t.resize(image_height);
-        }
+        std::vector<int> tmp_img;
+        tmp_img.resize(image_width * image_height);
 
         for (int height = 0; height < image_height; height++) {
             for (int width = 0; width < image_width; width++) {
                 image.read(&number, sizeof(char));
                 if (number == 0) {
-                    tmp_img.at(width).at(height) = 0;
+                    tmp_img.at(height * image_width + width) = 0;
                 } else {
-                    tmp_img.at(width).at(height) = 1;
+                    tmp_img.at(height * image_width + width) = 1;
                 }
             }
         }
-        images.at(image_number) = tmp_img;
+        images_2d.at(image_number) = tmp_img;
 
         // Read in label
         label.read(&number, sizeof(char));
-        labels.at(image_number) = number;
+        labels[image_number] = number;
     }
-
-    /*
-    int i = 0;
-    for (const auto &t : images) {
-        for (int height = 1; height <= image_height; height++) {
-            for (int width = 1; width <= image_width; width++) {
-                std::cout << t.at(width).at(height);
-            }
-            std::cout << std::endl;
-        }
-        std::cout << labels.at(i++) << std::endl;
-        std::cout << std::endl << std::endl;
-    }
-     */
 }
 
 void save_weights_to_file(std::string file_name)
@@ -297,10 +291,8 @@ void save_weights_to_file(std::string file_name)
     file.close();
 }
 
-void training(float *x, float *y)
+void training(float *, float *)
 {
-    x = nullptr;
-    y = nullptr;
     // int sample = blockIdx.x*blockDim.x+threadIdx.x;
 
     for (int sample = 0; sample < training_samples; ++sample) {
@@ -310,15 +302,15 @@ void training(float *x, float *y)
         // Getting (image, label)
         for (int j = 0; j < image_height; ++j) {
             for (int i = 0; i < image_width; ++i) {
-                int pos = j * image_width + i;
-                out1[pos] = images.at(sample).at(i).at(j);
+                const int pos = j * image_width + i;
+                out1[pos] = images[sample * input_nodes + pos];
             }
         }
 
         for (int i = 0; i < output_nodes; ++i) {
             expected[i] = 0.0;
         }
-        expected[labels.at(sample)] = 1.0;
+        expected[labels[sample]] = 1.0;
 
         // Learning process: forward_learning (Forward procedure) - Back propagation
         int nIterations = learning_process();
@@ -351,17 +343,17 @@ void testing()
         // Getting (image, label)
         for (int j = 0; j < image_height; ++j) {
             for (int i = 0; i < image_width; ++i) {
-                int pos = j * image_width + i;
-                out1[pos] = images.at(sample).at(i).at(j);
+                const int pos = j * image_width + i;
+                out1[pos] = images[sample * input_nodes + pos];
             }
         }
 
         for (int i = 0; i < output_nodes; ++i) {
             expected[i] = 0.0;
         }
-        expected[labels.at(sample)] = 1.0;
+        expected[labels[sample]] = 1.0;
 
-        int label = labels.at(sample); // read_image();
+        int label = labels[sample]; // read_image();
 
         // Classification - forward_learning procedure
         forward_learning();
@@ -459,6 +451,8 @@ int main(int argc, char **argv)
         image.close();
         label.close();
 
+        images = vectorToArray<int>(images_2d);
+
         // cudaMemcpy(w1, w1, sizeof(float) * (input_nodes + 1), cudaMemcpyHostToDevice);
         // training<<<60, 1000>>>(w1, w2);
         training(nullptr, nullptr);
@@ -480,6 +474,7 @@ int main(int argc, char **argv)
         image.close();
         label.close();
 
+        images = vectorToArray<int>(images_2d);
         testing();
     }
 
