@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+/*
 // At the top of your code.
 #define gpu_assert(rv) gpu_assert_h((rv), __FILE__, __LINE__)
 void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = true)
@@ -22,46 +23,39 @@ void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = tru
             exit(code);
     }
 }
+ */
 
 const char *model_fn = "neural_network_matrices.txt";
-const char *report_fn = "training-report.dat";
+const char *report_fn = "training_report.txt";
 
 // Image constraints
-const int testing_samples = 10'000, training_samples = 10'000, image_width = 28, image_height = 28;
+const int testing_samples = 10'000, training_samples = 500, image_width = 28, image_height = 28;
 
 // imgs[60'000][image_width + 1][image_height + 1];
-std::vector<std::vector<std::vector<int>>> images(training_samples);
-std::vector<int> labels(training_samples);
+std::vector<std::vector<std::vector<int>>> images;
+std::vector<int> labels;
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
 const int epochs = 512;
 const float learning_rate = 0.001;
 const float momentum = 0.9;
-const float epsilon = 1e-3;
+const float epsilon = 0.001;
 
 // read_image layer -> Hidden layer
-float *w1[input_nodes + 1], *delta1[input_nodes + 1], *out1;
-
-// Cuda vars
-float *cuda_w1[input_nodes + 1], *cuda_delta1[input_nodes + 1], *cuda_out1;
+float w1[input_nodes * hidden_nodes];
+float delta1[input_nodes * hidden_nodes], out1[input_nodes];
 
 // Hidden layer -> Output layer
-float *w2[hidden_nodes + 1], *delta2[hidden_nodes + 1], *ihidden_nodes, *out2, *theta2;
-
-// Cuda vars
-float *cuda_w2[hidden_nodes + 1], *cuda_delta2[hidden_nodes + 1], *cuda_ihidden_nodes, *cuda_out2, *cuda_theta2;
+float w2[hidden_nodes * output_nodes];
+float delta2[hidden_nodes * output_nodes], ihidden_nodes[hidden_nodes], out2[hidden_nodes], theta2[hidden_nodes];
 
 // Output layer
-float *ioutput_nodes, *out3, *theta3;
-float expected[output_nodes + 1];
-
-float *cuda_ioutput_nodes, *cuda_out3, *cuda_theta3;
-float *cuda_expected[output_nodes + 1];
+float ioutput_nodes[output_nodes], out3[output_nodes], theta3[output_nodes];
+float expected[output_nodes];
 
 // File stream to read data (image, label) and write down a report
-std::ifstream image;
-std::ifstream label;
+std::ifstream image, label;
 std::ofstream report;
 
 void project_details()
@@ -76,47 +70,24 @@ void project_details()
 
 void init_nn_matrices()
 {
-    // Layer 1 - Layer 2 = read_image layer - Hidden layer
-    for (int i = 1; i <= input_nodes; ++i) {
-        w1[i] = new float[hidden_nodes + 1];
-        delta1[i] = new float[hidden_nodes + 1];
-    }
-
-    out1 = new float[input_nodes + 1];
-
-    // Layer 2 - Layer 3 = Hidden layer - Output layer
-    for (int i = 1; i <= hidden_nodes; ++i) {
-        w2[i] = new float[output_nodes + 1];
-        delta2[i] = new float[output_nodes + 1];
-    }
-
-    ihidden_nodes = new float[hidden_nodes + 1];
-    out2 = new float[hidden_nodes + 1];
-    theta2 = new float[hidden_nodes + 1];
-
-    // Layer 3 - Output layer
-    ioutput_nodes = new float[output_nodes + 1];
-    out3 = new float[output_nodes + 1];
-    theta3 = new float[output_nodes + 1];
-
     // Initialization of weights from read_image layer to Hidden layer
-    for (int i = 1; i <= input_nodes; ++i) {
-        for (int j = 1; j <= hidden_nodes; ++j) {
+    for (int i = 0; i < input_nodes; ++i) {
+        for (int j = 0; j < hidden_nodes; ++j) {
             int sign = rand() % 2;
-            w1[i][j] = (float)(rand() % 10 + 1) / (10 * hidden_nodes);
+            w1[i * hidden_nodes + j] = (float)(rand() % 10 + 1) / (10 * hidden_nodes);
             if (sign == 1) {
-                w1[i][j] = -w1[i][j];
+                w1[i * hidden_nodes + j] = -w1[i * hidden_nodes + j];
             }
         }
     }
 
     // Initialization of weights from Hidden layer to Output layer
-    for (int i = 1; i <= hidden_nodes; ++i) {
-        for (int j = 1; j <= output_nodes; ++j) {
+    for (int i = 0; i < hidden_nodes; ++i) {
+        for (int j = 0; j < output_nodes; ++j) {
             int sign = rand() % 2;
-            w2[i][j] = (float)(rand() % 10 + 1) / (10.0 * output_nodes);
+            w2[i * output_nodes + j] = (float)(rand() % 10 + 1) / (10.0 * output_nodes);
             if (sign == 1) {
-                w2[i][j] = -w2[i][j];
+                w2[i * output_nodes + j] = -w2[i * output_nodes + j];
             }
         }
     }
@@ -126,17 +97,22 @@ void load_model_from_backup(std::string file_name)
 {
     std::ifstream file(file_name, std::ios::in);
 
+    if (!file.is_open()) {
+        std::cout << "Unable to open matrix file" << std::endl;
+        exit(1);
+    }
+
     // read_image layer -> Hidden layer
-    for (int i = 1; i <= input_nodes; ++i) {
-        for (int j = 1; j <= hidden_nodes; ++j) {
-            file >> w1[i][j];
+    for (int i = 0; i < input_nodes; ++i) {
+        for (int j = 0; j < hidden_nodes; ++j) {
+            file >> w1[i * hidden_nodes + j];
         }
     }
 
     // Hidden layer -> Output layer
-    for (int i = 1; i <= hidden_nodes; ++i) {
-        for (int j = 1; j <= output_nodes; ++j) {
-            file >> w2[i][j];
+    for (int i = 0; i < hidden_nodes; ++i) {
+        for (int j = 0; j < output_nodes; ++j) {
+            file >> w2[i * output_nodes + j];
         }
     }
 
@@ -151,31 +127,31 @@ float activation_function(float x)
 
 void forward_learning()
 {
-    for (int i = 1; i <= hidden_nodes; ++i) {
+    for (int i = 0; i < hidden_nodes; ++i) {
         ihidden_nodes[i] = 0.0;
     }
 
-    for (int i = 1; i <= output_nodes; ++i) {
+    for (int i = 0; i < output_nodes; ++i) {
         ioutput_nodes[i] = 0.0;
     }
 
-    for (int i = 1; i <= input_nodes; ++i) {
-        for (int j = 1; j <= hidden_nodes; ++j) {
-            ihidden_nodes[j] += out1[i] * w1[i][j];
+    for (int i = 0; i < input_nodes; ++i) {
+        for (int j = 0; j < hidden_nodes; ++j) {
+            ihidden_nodes[j] += out1[i] * w1[i * hidden_nodes + j];
         }
     }
 
-    for (int i = 1; i <= hidden_nodes; ++i) {
+    for (int i = 0; i < hidden_nodes; ++i) {
         out2[i] = activation_function(ihidden_nodes[i]);
     }
 
-    for (int i = 1; i <= hidden_nodes; ++i) {
-        for (int j = 1; j <= output_nodes; ++j) {
-            ioutput_nodes[j] += out2[i] * w2[i][j];
+    for (int i = 0; i < hidden_nodes; ++i) {
+        for (int j = 0; j < output_nodes; ++j) {
+            ioutput_nodes[j] += out2[i] * w2[i * output_nodes + j];
         }
     }
 
-    for (int i = 1; i <= output_nodes; ++i) {
+    for (int i = 0; i < output_nodes; ++i) {
         out3[i] = activation_function(ioutput_nodes[i]);
     }
 }
@@ -184,7 +160,7 @@ void forward_learning()
 float square_error()
 {
     float res = 0.0;
-    for (int i = 1; i <= output_nodes; ++i) {
+    for (int i = 0; i < output_nodes; ++i) {
         res += (out3[i] - expected[i]) * (out3[i] - expected[i]);
     }
     res *= 0.5;
@@ -195,29 +171,31 @@ void back_propagation()
 {
     float sum;
 
-    for (int i = 1; i <= output_nodes; ++i) {
+    for (int i = 0; i < output_nodes; ++i) {
         theta3[i] = out3[i] * (1 - out3[i]) * (expected[i] - out3[i]);
     }
 
-    for (int i = 1; i <= hidden_nodes; ++i) {
+    for (int i = 0; i < hidden_nodes; ++i) {
         sum = 0.0;
-        for (int j = 1; j <= output_nodes; ++j) {
-            sum += w2[i][j] * theta3[j];
+        for (int j = 0; j < output_nodes; ++j) {
+            sum += w2[i * output_nodes + j] * theta3[j];
         }
         theta2[i] = out2[i] * (1 - out2[i]) * sum;
     }
 
-    for (int i = 1; i <= hidden_nodes; ++i) {
-        for (int j = 1; j <= output_nodes; ++j) {
-            delta2[i][j] = (learning_rate * theta3[j] * out2[i]) + (momentum * delta2[i][j]);
-            w2[i][j] += delta2[i][j];
+    for (int i = 0; i < hidden_nodes; ++i) {
+        for (int j = 0; j < output_nodes; ++j) {
+            delta2[i * output_nodes + j] =
+                (learning_rate * theta3[j] * out2[i]) + (momentum * delta2[i * output_nodes + j]);
+            w2[i * output_nodes + j] += delta2[i * output_nodes + j];
         }
     }
 
-    for (int i = 1; i <= input_nodes; ++i) {
-        for (int j = 1; j <= hidden_nodes; j++) {
-            delta1[i][j] = (learning_rate * theta2[j] * out1[i]) + (momentum * delta1[i][j]);
-            w1[i][j] += delta1[i][j];
+    for (int i = 0; i < input_nodes; ++i) {
+        for (int j = 0; j < hidden_nodes; j++) {
+            delta1[i * hidden_nodes + j] =
+                (learning_rate * theta2[j] * out1[i]) + (momentum * delta1[i * hidden_nodes + j]);
+            w1[i * hidden_nodes + j] += delta1[i * hidden_nodes + j];
         }
     }
 }
@@ -225,19 +203,19 @@ void back_propagation()
 int learning_process()
 {
     // Initialize delta arrays
-    for (int i = 1; i <= input_nodes; ++i) {
-        for (int j = 1; j <= hidden_nodes; ++j) {
-            delta1[i][j] = 0.0;
+    for (int i = 0; i < input_nodes; ++i) {
+        for (int j = 0; j < hidden_nodes; ++j) {
+            delta1[i * hidden_nodes + j] = 0.0;
         }
     }
 
-    for (int i = 1; i <= hidden_nodes; ++i) {
-        for (int j = 1; j <= output_nodes; ++j) {
-            delta2[i][j] = 0.0;
+    for (int i = 0; i < hidden_nodes; ++i) {
+        for (int j = 0; j < output_nodes; ++j) {
+            delta2[i * output_nodes + j] = 0.0;
         }
     }
 
-    for (int i = 1; i <= epochs; ++i) {
+    for (int i = 0; i < epochs; ++i) {
         forward_learning();
         back_propagation();
         if (square_error() < epsilon) {
@@ -247,20 +225,25 @@ int learning_process()
     return epochs;
 }
 
-void read_images()
+void read_images(int sample_count)
 {
     char number;
 
-    for (int image_number = 0; image_number < training_samples; image_number++) {
+    images.clear();
+    labels.clear();
+    images.resize(sample_count);
+    labels.resize(sample_count);
+
+    for (int image_number = 0; image_number < sample_count; image_number++) {
         // Create image holders, set values to 0 by default
         std::vector<std::vector<int>> tmp_img;
-        tmp_img.resize(image_width + 1);
+        tmp_img.resize(image_width);
         for (auto &t : tmp_img) {
-            t.resize(image_height + 1);
+            t.resize(image_height);
         }
 
-        for (int height = 1; height <= image_height; height++) {
-            for (int width = 1; width <= image_width; width++) {
+        for (int height = 0; height < image_height; height++) {
+            for (int width = 0; width < image_width; width++) {
                 image.read(&number, sizeof(char));
                 if (number == 0) {
                     tmp_img.at(width).at(height) = 0;
@@ -296,17 +279,17 @@ void save_weights_to_file(std::string file_name)
     std::ofstream file(file_name.c_str(), std::ios::out);
 
     // read_image layer -> Hidden layer
-    for (int i = 1; i <= input_nodes; ++i) {
-        for (int j = 1; j <= hidden_nodes; ++j) {
-            file << w1[i][j] << " ";
+    for (int i = 0; i < input_nodes; ++i) {
+        for (int j = 0; j < hidden_nodes; ++j) {
+            file << w1[i * hidden_nodes + j] << " ";
         }
         file << std::endl;
     }
 
     // Hidden layer -> Output layer
-    for (int i = 1; i <= hidden_nodes; ++i) {
-        for (int j = 1; j <= output_nodes; ++j) {
-            file << w2[i][j] << " ";
+    for (int i = 0; i < hidden_nodes; ++i) {
+        for (int j = 0; j < output_nodes; ++j) {
+            file << w2[i * output_nodes + j] << " ";
         }
         file << std::endl;
     }
@@ -314,23 +297,28 @@ void save_weights_to_file(std::string file_name)
     file.close();
 }
 
-void training()
+void training(float *x, float *y)
 {
+    x = nullptr;
+    y = nullptr;
+    // int sample = blockIdx.x*blockDim.x+threadIdx.x;
+
     for (int sample = 0; sample < training_samples; ++sample) {
-        std::cout << "Sample " << sample << std::endl;
+        // std::cout << "Sample " << sample << std::endl;
+        printf("Sample %d\n", sample);
 
         // Getting (image, label)
-        for (int j = 1; j <= image_height; ++j) {
-            for (int i = 1; i <= image_width; ++i) {
-                int pos = i + (j - 1) * image_width;
+        for (int j = 0; j < image_height; ++j) {
+            for (int i = 0; i < image_width; ++i) {
+                int pos = j * image_width + i;
                 out1[pos] = images.at(sample).at(i).at(j);
             }
         }
 
-        for (int i = 1; i <= output_nodes; ++i) {
+        for (int i = 0; i < output_nodes; ++i) {
             expected[i] = 0.0;
         }
-        expected[labels.at(sample) + 1] = 1.0;
+        expected[labels.at(sample)] = 1.0;
 
         // Learning process: forward_learning (Forward procedure) - Back propagation
         int nIterations = learning_process();
@@ -338,13 +326,13 @@ void training()
         // Write down the squared error
         std::cout << "Iterations: " << nIterations << std::endl;
         printf("Error: %0.6lf\n\n", square_error());
-        report << "Sample " << sample + 1 << ": Iterations = " << nIterations << ", Error = " << square_error()
-               << std::endl;
+        // report << "Sample " << sample + 1 << ": Iterations = " << nIterations << ", Error = " << square_error()
+        //       << std::endl;
 
         // Save the current network (weights) every so often
-        if (sample % 100 == 0) {
-            save_weights_to_file(model_fn);
-        }
+        // if (sample % 100 == 0) {
+        //    save_weights_to_file(model_fn);
+        //}
     }
 
     // Save the final network
@@ -353,24 +341,25 @@ void training()
 
 void testing()
 {
-    load_model_from_backup(model_fn); // Load model (weight matrices) of a trained Neural Network
+    // Load model (weight matrices) of a trained Neural Network
+    load_model_from_backup(model_fn);
 
     int nCorrect = 0;
     for (int sample = 0; sample < testing_samples; ++sample) {
         std::cout << "Sample " << sample << std::endl;
 
         // Getting (image, label)
-        for (int j = 1; j <= image_height; ++j) {
-            for (int i = 1; i <= image_width; ++i) {
-                int pos = i + (j - 1) * image_width;
+        for (int j = 0; j < image_height; ++j) {
+            for (int i = 0; i < image_width; ++i) {
+                int pos = j * image_width + i;
                 out1[pos] = images.at(sample).at(i).at(j);
             }
         }
 
-        for (int i = 1; i <= output_nodes; ++i) {
+        for (int i = 0; i < output_nodes; ++i) {
             expected[i] = 0.0;
         }
-        expected[labels.at(sample) + 1] = 1.0;
+        expected[labels.at(sample)] = 1.0;
 
         int label = labels.at(sample); // read_image();
 
@@ -378,13 +367,12 @@ void testing()
         forward_learning();
 
         // Prediction
-        int predict = 1;
-        for (int i = 2; i <= output_nodes; ++i) {
+        int predict = 0;
+        for (int i = 1; i < output_nodes; ++i) {
             if (out3[i] > out3[predict]) {
                 predict = i;
             }
         }
-        --predict;
 
         // Write down the classification result and the squared error
         float error = square_error();
@@ -467,8 +455,13 @@ int main(int argc, char **argv)
         // From there,
 
         // Read all images & labels into memory
-        read_images();
-        training();
+        read_images(training_samples);
+        image.close();
+        label.close();
+
+        // cudaMemcpy(w1, w1, sizeof(float) * (input_nodes + 1), cudaMemcpyHostToDevice);
+        // training<<<60, 1000>>>(w1, w2);
+        training(nullptr, nullptr);
     }
     if (will_test) {
         image.open("mnist/t10k-images-idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
@@ -483,7 +476,10 @@ int main(int argc, char **argv)
             label.read(&number, sizeof(char));
         }
 
-        read_images();
+        read_images(testing_samples);
+        image.close();
+        label.close();
+
         testing();
     }
 
