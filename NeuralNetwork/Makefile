@@ -1,7 +1,7 @@
-all: cpp
+all: format cpp cu
 
 cpp: neuralnetwork.cpp
-	g++ neuralnetwork.cpp -o cpu_training -std=c++17 -Wall -Wextra -pedantic -g
+	g++ neuralnetwork.cpp -o cpu_training -std=c++17 -Wall -Wextra -pedantic -O2
 
 cu: neuralnetwork.cu
 	nvcc neuralnetwork.cu -o gpu_training

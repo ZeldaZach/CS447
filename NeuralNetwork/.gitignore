@@ -2,3 +2,5 @@
 cmake-build-*/
 a.*
 *.pgm
+*_training
+*.txt
