@@ -24,7 +24,7 @@ const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training_report.txt";
 
 // Data constraints
-const int testing_samples = 10'000, training_samples = 500, image_width = 28, image_height = 28;
+const int testing_samples = 50, training_samples = 60'000, image_width = 28, image_height = 28;
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
@@ -111,6 +111,10 @@ void load_model_from_backup(std::string file_name)
     for (int i = 0; i < input_nodes; ++i) {
         for (int j = 0; j < hidden_nodes; ++j) {
             file >> w1[i * hidden_nodes + j];
+
+            if (j % 100 == 0) {
+                // printf("Loaded value w1[%d]=%f\n", i * hidden_nodes + j, w1[i * hidden_nodes + j]);
+            }
         }
     }
 
@@ -118,6 +122,7 @@ void load_model_from_backup(std::string file_name)
     for (int i = 0; i < hidden_nodes; ++i) {
         for (int j = 0; j < output_nodes; ++j) {
             file >> w2[i * output_nodes + j];
+            // printf("Loaded value w2[%d]=%f\n", i * output_nodes + j, w2[i * output_nodes + j]);
         }
     }
 
@@ -142,7 +147,7 @@ __device__ void forward_learning(float *w1, float *w2)
 
     for (int i = 0; i < input_nodes; ++i) {
         for (int j = 0; j < hidden_nodes; ++j) {
-            ihidden_nodes[j] += out1[i] * w1[i * hidden_nodes + j];
+            atomicAdd(&ihidden_nodes[j], out1[i] * w1[i * hidden_nodes + j]);
         }
     }
 
@@ -152,12 +157,14 @@ __device__ void forward_learning(float *w1, float *w2)
 
     for (int i = 0; i < hidden_nodes; ++i) {
         for (int j = 0; j < output_nodes; ++j) {
-            ioutput_nodes[j] += out2[i] * w2[i * output_nodes + j];
+            printf("ioutput_nodes[%d]=%d, adding %d*%d\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
+            atomicAdd(&ioutput_nodes[j], out2[i] * w2[i * output_nodes + j]);
         }
     }
 
     for (int i = 0; i < output_nodes; ++i) {
         out3[i] = activation_function(ioutput_nodes[i]);
+        printf("Out3[%d] = %d, ioutput_nodes[%d]=%d\n", i, out3[i], i, ioutput_nodes[i]);
     }
 }
 
@@ -330,9 +337,23 @@ __global__ void training(float *w1, float *w2, int *images, int *labels)
     // save_weights_to_file(model_fn);
 }
 
-__global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCorrect)
+__global__ void testing(float *w1) //, float *w2, int *images, int *labels, int *nCorrect)
 {
     // int id = blockIdx.x * blockDim.x + threadIdx.x;
+
+    for (int i = 0; i < 10; i++) {
+        printf("DEVICE w1[%d]=%d\n", i, w1[i]);
+    }
+    return;
+
+    /*
+    for (int i = 0; i < input_nodes; i++) {
+        for (int j = 0; j < hidden_nodes; j++) {
+            printf("DEVICE w1[%d]=%d\n", i * hidden_nodes + j, w1[i * hidden_nodes + j]);
+            return;
+        }
+    }
+    return;
 
     *nCorrect = 0;
     for (int sample = 0; sample < testing_samples; ++sample) {
@@ -387,10 +408,19 @@ __global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCo
 
     // report << "Number of correct samples: " << nCorrect << " / " << testing_samples << std::endl;
     // report << "Accuracy: " << accuracy << std::endl;
+     */
+}
+
+__global__ void kernel(float *w1)
+{
+    for (int i = 0; i < 10; i++) {
+        printf("DEVICE w1[%d]=%d\n", i, w1[i]);
+    }
 }
 
 int main(int argc, char **argv)
 {
+    /*
     bool will_test = false, will_train = false;
     if (argc == 1) {
         will_train = true;
@@ -479,8 +509,9 @@ int main(int argc, char **argv)
 
         delete[] images;
         delete[] labels;
-    }
-    if (will_test) {
+    }*/
+
+    if (true) {
         image.open("mnist/t10k-images-idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
         label.open("mnist/t10k-labels-idx1-ubyte", std::ios::in | std::ios::binary); // Binary label file
 
@@ -502,29 +533,37 @@ int main(int argc, char **argv)
         // Load model (weight matrices) of a trained Neural Network
         load_model_from_backup(model_fn);
 
+        for (int i = 0; i < 10; i++) {
+            printf("HOST w1[%d]=%f\n", i, w1[i]);
+        }
+
         // CUDA MALLOCS
         float *cuda_w1, *cuda_w2;
         int *cuda_images, *cuda_labels, *cuda_num_correct;
 
-        cudaMalloc(&cuda_w1, input_nodes * hidden_nodes * sizeof(float));
+        gpu_assert(cudaMalloc(&cuda_w1, 10 * sizeof(float)));
         cudaMalloc(&cuda_w2, hidden_nodes * output_nodes * sizeof(float));
         cudaMalloc(&cuda_images, images_2d.size() * images_2d[0].size() * sizeof(int));
         cudaMalloc(&cuda_labels, images_2d.size() * sizeof(int));
         cudaMalloc(&cuda_num_correct, sizeof(int));
 
-        cudaMemcpy(cuda_w1, w1, hidden_nodes * output_nodes * sizeof(float), cudaMemcpyHostToDevice);
-        cudaMemcpy(cuda_w2, w2, input_nodes * hidden_nodes * sizeof(float), cudaMemcpyHostToDevice);
+        gpu_assert(cudaMemcpy(cuda_w1, w1, 10 * sizeof(float), cudaMemcpyHostToDevice));
+        cudaMemcpy(cuda_w2, w2, hidden_nodes * output_nodes * sizeof(float), cudaMemcpyHostToDevice);
         cudaMemcpy(cuda_images, images, images_2d.size() * images_2d[0].size() * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(cuda_labels, labels, images_2d.size() * sizeof(int), cudaMemcpyHostToDevice);
 
-        testing<<<1, 1>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
+
+
+        kernel<<<1, 1>>>(cuda_w1);
+
+        // testing<<<1, 1>>>(cuda_w1); //, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
         cudaDeviceSynchronize();
 
-        int *result = new int(3);
-        cudaMemcpy(result, cuda_num_correct, sizeof(int), cudaMemcpyDeviceToHost);
+        // int *result = new int(3);
+        // cudaMemcpy(result, cuda_num_correct, sizeof(int), cudaMemcpyDeviceToHost);
 
-        printf("Total %d\n", *result);
-
+        //      printf("Total %d\n", *result);
+        //
         cudaFree(cuda_w1);
         cudaFree(cuda_w2);
         cudaFree(cuda_images);
