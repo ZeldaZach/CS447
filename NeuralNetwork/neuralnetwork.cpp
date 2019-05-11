@@ -24,7 +24,7 @@ const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training_report.txt";
 
 // Data constraints
-const int testing_samples = 50, training_samples = 60'000, image_width = 28, image_height = 28;
+const int testing_samples = 10'000, training_samples = 60'000, image_width = 28, image_height = 28;
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
@@ -157,14 +157,14 @@ __device__ void forward_learning(float *w1, float *w2)
 
     for (int i = 0; i < hidden_nodes; ++i) {
         for (int j = 0; j < output_nodes; ++j) {
-            printf("ioutput_nodes[%d]=%d, adding %d*%d\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
+           // printf("ioutput_nodes[%d]=%f, adding %f*%f\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
             atomicAdd(&ioutput_nodes[j], out2[i] * w2[i * output_nodes + j]);
         }
     }
 
     for (int i = 0; i < output_nodes; ++i) {
         out3[i] = activation_function(ioutput_nodes[i]);
-        printf("Out3[%d] = %d, ioutput_nodes[%d]=%d\n", i, out3[i], i, ioutput_nodes[i]);
+        printf("Out3[%d] = %f, ioutput_nodes[%d]=%f\n", i, out3[i], i, ioutput_nodes[i]);
     }
 }
 
@@ -337,26 +337,11 @@ __global__ void training(float *w1, float *w2, int *images, int *labels)
     // save_weights_to_file(model_fn);
 }
 
-__global__ void testing(float *w1) //, float *w2, int *images, int *labels, int *nCorrect)
+__global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCorrect)
 {
-    // int id = blockIdx.x * blockDim.x + threadIdx.x;
+    int sample = blockIdx.x * blockDim.x + threadIdx.x;
 
-    for (int i = 0; i < 10; i++) {
-        printf("DEVICE w1[%d]=%d\n", i, w1[i]);
-    }
-    return;
-
-    /*
-    for (int i = 0; i < input_nodes; i++) {
-        for (int j = 0; j < hidden_nodes; j++) {
-            printf("DEVICE w1[%d]=%d\n", i * hidden_nodes + j, w1[i * hidden_nodes + j]);
-            return;
-        }
-    }
-    return;
-
-    *nCorrect = 0;
-    for (int sample = 0; sample < testing_samples; ++sample) {
+    //for (int sample = 0; sample < testing_samples; ++sample) {
         if (sample % 100 == 0) {
             printf("Sample %d\n", sample);
         }
@@ -382,6 +367,7 @@ __global__ void testing(float *w1) //, float *w2, int *images, int *labels, int 
         // Prediction
         int predict = 0;
         for (int i = 1; i < output_nodes; ++i) {
+            printf("out3[%d]=%f, out3[%d]=%f\n", i, out3[i], predict, out3[predict]);
             if (out3[i] > out3[predict]) {
                 predict = i;
             }
@@ -392,23 +378,23 @@ __global__ void testing(float *w1) //, float *w2, int *images, int *labels, int 
         printf("Error: %0.6lf\n", error);
 
         if (label == predict) {
-            ++*nCorrect;
+            atomicAdd(nCorrect, 1);
             printf("Classification: YES. Label = %d. Prediction = %d\n", label, predict);
             // printf("Sample %d: YES. Label = %d. Prediction = %d\n", sample, label, predict);
         } else {
             printf("Classification: NO. Label = %d. Prediction = %d\n", label, predict);
             // printf("Sample %d: NO. Label = %d. Prediction = %d\n", sample, label, predict);
         }
-    }
+    //}
 
     // Summary
-    float accuracy = (float)(*nCorrect) / testing_samples * 100.0;
-    printf("Number of correct samples: %d/%d\n", *nCorrect, testing_samples);
-    printf("Accuracy: %0.2lf\n", accuracy);
+    //float accuracy = (float)(*nCorrect) / testing_samples * 100.0;
+    //printf("Number of correct samples: %d/%d\n", *nCorrect, testing_samples);
+    //printf("Accuracy: %0.2lf\n", accuracy);
 
     // report << "Number of correct samples: " << nCorrect << " / " << testing_samples << std::endl;
     // report << "Accuracy: " << accuracy << std::endl;
-     */
+
 }
 
 __global__ void kernel(float *w1)
@@ -420,7 +406,6 @@ __global__ void kernel(float *w1)
 
 int main(int argc, char **argv)
 {
-    /*
     bool will_test = false, will_train = false;
     if (argc == 1) {
         will_train = true;
@@ -509,9 +494,9 @@ int main(int argc, char **argv)
 
         delete[] images;
         delete[] labels;
-    }*/
+    }
 
-    if (true) {
+    if (will_test) {
         image.open("mnist/t10k-images-idx3-ubyte", std::ios::in | std::ios::binary); // Binary image file
         label.open("mnist/t10k-labels-idx1-ubyte", std::ios::in | std::ios::binary); // Binary label file
 
@@ -541,29 +526,26 @@ int main(int argc, char **argv)
         float *cuda_w1, *cuda_w2;
         int *cuda_images, *cuda_labels, *cuda_num_correct;
 
-        gpu_assert(cudaMalloc(&cuda_w1, 10 * sizeof(float)));
+        gpu_assert(cudaMalloc(&cuda_w1, input_nodes * hidden_nodes * sizeof(float)));
         cudaMalloc(&cuda_w2, hidden_nodes * output_nodes * sizeof(float));
         cudaMalloc(&cuda_images, images_2d.size() * images_2d[0].size() * sizeof(int));
         cudaMalloc(&cuda_labels, images_2d.size() * sizeof(int));
         cudaMalloc(&cuda_num_correct, sizeof(int));
 
-        gpu_assert(cudaMemcpy(cuda_w1, w1, 10 * sizeof(float), cudaMemcpyHostToDevice));
+        gpu_assert(cudaMemcpy(cuda_w1, w1, input_nodes * hidden_nodes * sizeof(float), cudaMemcpyHostToDevice));
         cudaMemcpy(cuda_w2, w2, hidden_nodes * output_nodes * sizeof(float), cudaMemcpyHostToDevice);
         cudaMemcpy(cuda_images, images, images_2d.size() * images_2d[0].size() * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(cuda_labels, labels, images_2d.size() * sizeof(int), cudaMemcpyHostToDevice);
+        cudaMemcpy(cuda_num_correct, new int(0), sizeof(int), cudaMemcpyHostToDevice);
 
 
-
-        kernel<<<1, 1>>>(cuda_w1);
-
-        // testing<<<1, 1>>>(cuda_w1); //, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
+        testing<<<10, 1000>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
         cudaDeviceSynchronize();
 
-        // int *result = new int(3);
-        // cudaMemcpy(result, cuda_num_correct, sizeof(int), cudaMemcpyDeviceToHost);
+        int *result = new int(3);
+        cudaMemcpy(result, cuda_num_correct, sizeof(int), cudaMemcpyDeviceToHost);
+        printf("Total %d\n", *result);
 
-        //      printf("Total %d\n", *result);
-        //
         cudaFree(cuda_w1);
         cudaFree(cuda_w2);
         cudaFree(cuda_images);
