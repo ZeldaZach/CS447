@@ -132,7 +132,7 @@ void load_model_from_backup(std::string file_name)
 __device__ float activation_function(float x)
 {
     // SIGMOID
-    printf("Activation %f to %f\n", x, 1.0/(1.0+exp(-x)));
+    // printf("Activation %f to %f\n", x, 1.0/(1.0+exp(-x)));
     return 1.0 / (1.0 + exp(-x));
 }
 
@@ -147,10 +147,10 @@ __device__ void forward_learning(float *w1, float *w2)
         out3[i] = 0.0;
     }
 
-
     for (int i = 0; i < input_nodes; ++i) {
         for (int j = 0; j < hidden_nodes; ++j) {
-            atomicAdd(&ihidden_nodes[j], out1[i] * w1[i * hidden_nodes + j]);
+            // atomicAdd(&ihidden_nodes[j], out1[i] * w1[i * hidden_nodes + j]);
+            ihidden_nodes[j] += out1[i] * w1[i * hidden_nodes + j];
         }
     }
 
@@ -160,8 +160,9 @@ __device__ void forward_learning(float *w1, float *w2)
 
     for (int i = 0; i < hidden_nodes; ++i) {
         for (int j = 0; j < output_nodes; ++j) {
-            //printf("ioutput_nodes[%d]=%f, adding %f*%f\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
-            atomicAdd(&ioutput_nodes[j], out2[i] * w2[i * output_nodes + j]);
+            // printf("ioutput_nodes[%d]=%f, adding %f*%f\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
+            // atomicAdd(&ioutput_nodes[j], out2[i] * w2[i * output_nodes + j]);
+            ioutput_nodes[j] += out2[i] * w2[i * output_nodes + j];
         }
     }
 
