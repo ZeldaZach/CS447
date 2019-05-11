@@ -24,7 +24,7 @@ const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training_report.txt";
 
 // Data constraints
-const int testing_samples = 10'000, training_samples = 60'000, image_width = 28, image_height = 28;
+const int testing_samples = 10'000, training_samples = 500, image_width = 28, image_height = 28;
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
@@ -41,15 +41,9 @@ int *images, *labels;
 
 // Input layer -> Hidden layer
 float w1[input_nodes * hidden_nodes];
-__device__ float delta1[input_nodes * hidden_nodes], out1[input_nodes];
 
 // Hidden layer -> Output layer
 float w2[hidden_nodes * output_nodes];
-__device__ float delta2[hidden_nodes * output_nodes], ihidden_nodes[hidden_nodes];
-__device__ float out2[hidden_nodes], theta2[hidden_nodes];
-
-// Output layer
-__device__ float ioutput_nodes[output_nodes], out3[output_nodes], theta3[output_nodes], expected[output_nodes];
 
 // File stream to read/write data
 std::ifstream image, label;
@@ -136,6 +130,47 @@ __device__ float activation_function(float x)
     return 1.0 / (1.0 + exp(-x));
 }
 
+__device__ void
+forward_learning(float *w1, float *w2, float *ihidden_nodes1, float *ioutput_nodes1, float *out31, float *out11)
+{
+    float out21[hidden_nodes];
+    for (int i = 0; i < hidden_nodes; i++) {
+        out21[i] = 0.0f;
+    }
+
+    for (int i = 0; i < hidden_nodes; ++i) {
+        ihidden_nodes1[i] = 0.0;
+    }
+
+    for (int i = 0; i < output_nodes; ++i) {
+        ioutput_nodes1[i] = 0.0;
+        out31[i] = 0.0;
+    }
+
+    for (int i = 0; i < input_nodes; ++i) {
+        for (int j = 0; j < hidden_nodes; ++j) {
+            ihidden_nodes1[j] += out11[i] * w1[i * hidden_nodes + j];
+        }
+    }
+
+    for (int i = 0; i < hidden_nodes; ++i) {
+        out21[i] = activation_function(ihidden_nodes1[i]);
+    }
+
+    for (int i = 0; i < hidden_nodes; ++i) {
+        for (int j = 0; j < output_nodes; ++j) {
+            // printf("ioutput_nodes1[%d]=%f, adding %f*%f\n", j, ioutput_nodes1[j], out2[i], w2[i * output_nodes + j]);
+            ioutput_nodes1[j] += out21[i] * w2[i * output_nodes + j];
+        }
+    }
+
+    for (int i = 0; i < output_nodes; ++i) {
+        out31[i] = activation_function(ioutput_nodes1[i]);
+        // printf("out31[%d] = %f, ioutput_nodes1[%d]=%f\n", i, out31[i], i, ioutput_nodes1[i]);
+    }
+}
+
+/*
 __device__ void forward_learning(float *w1, float *w2)
 {
     for (int i = 0; i < hidden_nodes; ++i) {
@@ -166,12 +201,13 @@ __device__ void forward_learning(float *w1, float *w2)
 
     for (int i = 0; i < output_nodes; ++i) {
         out3[i] = activation_function(ioutput_nodes[i]);
-        printf("out3[%d] = %f, ioutput_nodes[%d]=%f\n", i, out3[i], i, ioutput_nodes[i]);
+        // printf("out3[%d] = %f, ioutput_nodes[%d]=%f\n", i, out3[i], i, ioutput_nodes[i]);
     }
 }
+*/
 
 // Normalize error
-__device__ float square_error()
+__device__ float square_error(float *out3, float *expected)
 {
     float res = 0.0;
     for (int i = 0; i < output_nodes; ++i) {
@@ -181,16 +217,26 @@ __device__ float square_error()
     return res;
 }
 
-__device__ void back_propagation(float *w1, float *w2)
+__device__ void back_propagation(float *w1,
+                                 float *w2,
+                                 float *out3,
+                                 float *out2,
+                                 float *out1,
+                                 float *expected,
+                                 float *delta2,
+                                 float *delta1)
 {
     float sum;
+
+    float theta2[hidden_nodes];
+    float theta3[output_nodes];
 
     for (int i = 0; i < output_nodes; ++i) {
         theta3[i] = out3[i] * (1 - out3[i]) * (expected[i] - out3[i]);
     }
 
     for (int i = 0; i < hidden_nodes; ++i) {
-        sum = 0.0;
+        sum = 0.1;
         for (int j = 0; j < output_nodes; ++j) {
             sum += w2[i * output_nodes + j] * theta3[j];
         }
@@ -202,7 +248,10 @@ __device__ void back_propagation(float *w1, float *w2)
             delta2[i * output_nodes + j] =
                 (learning_rate * theta3[j] * out2[i]) + (momentum * delta2[i * output_nodes + j]);
 
+            printf("W2 before=%f\n", w2[i * output_nodes + j]);
             atomicAdd(&w2[i * output_nodes + j], delta2[i * output_nodes + j]);
+            printf("W2 after=%f\n", w2[i * output_nodes + j]);
+
             // w2[i * output_nodes + j] += delta2[i * output_nodes + j];
         }
     }
@@ -218,8 +267,18 @@ __device__ void back_propagation(float *w1, float *w2)
     }
 }
 
-__device__ int learning_process(float *w1, float *w2)
+__device__ int learning_process(float *w1,
+                                float *w2,
+                                float *ihidden_nodes,
+                                float *ioutput_nodes,
+                                float *out3,
+                                float *out2,
+                                float *out1,
+                                float *expected)
 {
+    float delta2[hidden_nodes * output_nodes];
+    float delta1[input_nodes * hidden_nodes];
+    /*
     // Initialize delta arrays
     for (int i = 0; i < input_nodes; ++i) {
         for (int j = 0; j < hidden_nodes; ++j) {
@@ -232,11 +291,12 @@ __device__ int learning_process(float *w1, float *w2)
             delta2[i * output_nodes + j] = 0.0;
         }
     }
+     */
 
     for (int i = 0; i < epochs; ++i) {
-        forward_learning(w1, w2);
-        back_propagation(w1, w2);
-        if (square_error() < epsilon) {
+        forward_learning(w1, w2, ihidden_nodes, ioutput_nodes, out3, out1);
+        back_propagation(w1, w2, out3, out2, out1, expected, delta2, delta1);
+        if (square_error(out3, expected) < epsilon) {
             return i;
         }
     }
@@ -302,8 +362,21 @@ __global__ void training(float *w1, float *w2, int *images, int *labels)
 {
     int sample = blockIdx.x * blockDim.x + threadIdx.x;
 
-    if (sample % 100 == 0) {
-        printf("Sample %d\n", sample);
+    float out1[input_nodes];
+    float ihidden_nodes[hidden_nodes], out2[hidden_nodes];
+    float ioutput_nodes[output_nodes], out3[output_nodes], expected[output_nodes];
+
+    for (int i = 0; i < input_nodes; i++) {
+        out1[i] = 0.0;
+    }
+    for (int i = 0; i < hidden_nodes; i++) {
+        ihidden_nodes[i] = 0.0;
+        out2[i] = 0.0;
+    }
+    for (int i = 0; i < output_nodes; i++) {
+        ioutput_nodes[i] = 0.0;
+        out3[i] = 0.0;
+        expected[i] = 0.0;
     }
 
     // Getting (image, label)
@@ -320,13 +393,15 @@ __global__ void training(float *w1, float *w2, int *images, int *labels)
     expected[labels[sample]] = 1.0;
 
     // Learning process: forward_learning (Forward procedure) - Back propagation
-    int nIterations = learning_process(w1, w2);
+    int nIterations = learning_process(w1, w2, ihidden_nodes, ioutput_nodes, out3, out2, out1, expected);
 
+    /*
     if (sample % 100 == 0) {
         // Write down the squared error
         printf("Iterations: %d\n", nIterations);
-        printf("Error: %0.6lf\n\n", square_error());
+        printf("Error: %0.6lf\n\n", square_error(out3, expected));
     }
+     */
     // report << "Sample " << sample + 1 << ": Iterations = " << nIterations << ", Error = " << square_error()
     //       << std::endl;
 
@@ -343,38 +418,47 @@ __global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCo
 {
     int sample = blockIdx.x * blockDim.x + threadIdx.x;
 
+    float ihidden_nodes1[hidden_nodes];
+    float ioutput_nodes1[output_nodes];
+    float out31[output_nodes];
+    float out11[input_nodes];
+    // float expected[output_nodes];
+
     // for (int sample = 0; sample < testing_samples; ++sample) {
 
     // Getting (image, label)
     for (int j = 0; j < image_height; ++j) {
         for (int i = 0; i < image_width; ++i) {
             const int pos = j * image_width + i;
-            out1[pos] = images[sample * input_nodes + pos];
+            out11[pos] = images[sample * input_nodes + pos];
         }
     }
 
     int label = labels[sample]; // read_image();
 
+    /*
     for (int i = 0; i < output_nodes; ++i) {
         expected[i] = 0.0;
     }
     expected[label] = 1.0;
+     */
 
     // Classification - forward_learning procedure
-    forward_learning(w1, w2);
+    forward_learning(w1, w2, ihidden_nodes1, ioutput_nodes1, out31, out11);
+    // forward_learning(w1, w2);
 
     // Prediction
     int predict = 0;
     for (int i = 1; i < output_nodes; ++i) {
-        printf("out3[%d]=%f, out3[%d]=%f\n", i, out3[i], predict, out3[predict]);
-        if (out3[i] > out3[predict]) {
+        // printf("out3[%d]=%f, out3[%d]=%f\n", i, out3[i], predict, out3[predict]);
+        if (out31[i] > out31[predict]) {
             predict = i;
         }
     }
 
     // Write down the classification result and the squared error
-    float error = square_error();
-    printf("Error: %0.6lf\n", error);
+    // float error = square_error();
+    // printf("Error: %0.6lf\n", error);
 
     if (label == predict) {
         atomicAdd(nCorrect, 1);
@@ -393,13 +477,6 @@ __global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCo
 
     // report << "Number of correct samples: " << nCorrect << " / " << testing_samples << std::endl;
     // report << "Accuracy: " << accuracy << std::endl;
-}
-
-__global__ void kernel(float *w1)
-{
-    for (int i = 0; i < 10; i++) {
-        printf("DEVICE w1[%d]=%d\n", i, w1[i]);
-    }
 }
 
 int main(int argc, char **argv)
@@ -435,11 +512,11 @@ int main(int argc, char **argv)
         label.open("mnist/train-labels-idx1-ubyte", std::ios::in | std::ios::binary); // Binary label file
 
         if (!image.is_open()) {
-            std::cout << "MNIST training images not loaded" << std::endl;
+            printf("MNIST training images not loaded");
             exit(1);
         }
         if (!label.is_open()) {
-            std::cout << "MNIST labels not loaded" << std::endl;
+            printf("MNIST labels not loaded");
             exit(1);
         }
 
