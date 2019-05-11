@@ -132,6 +132,7 @@ void load_model_from_backup(std::string file_name)
 __device__ float activation_function(float x)
 {
     // SIGMOID
+    printf("Activation %f to %f\n", x, 1.0/(1.0+exp(-x)));
     return 1.0 / (1.0 + exp(-x));
 }
 
@@ -143,7 +144,9 @@ __device__ void forward_learning(float *w1, float *w2)
 
     for (int i = 0; i < output_nodes; ++i) {
         ioutput_nodes[i] = 0.0;
+        out3[i] = 0.0;
     }
+
 
     for (int i = 0; i < input_nodes; ++i) {
         for (int j = 0; j < hidden_nodes; ++j) {
@@ -157,14 +160,14 @@ __device__ void forward_learning(float *w1, float *w2)
 
     for (int i = 0; i < hidden_nodes; ++i) {
         for (int j = 0; j < output_nodes; ++j) {
-           // printf("ioutput_nodes[%d]=%f, adding %f*%f\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
+            //printf("ioutput_nodes[%d]=%f, adding %f*%f\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
             atomicAdd(&ioutput_nodes[j], out2[i] * w2[i * output_nodes + j]);
         }
     }
 
     for (int i = 0; i < output_nodes; ++i) {
         out3[i] = activation_function(ioutput_nodes[i]);
-        printf("Out3[%d] = %f, ioutput_nodes[%d]=%f\n", i, out3[i], i, ioutput_nodes[i]);
+        printf("out3[%d] = %f, ioutput_nodes[%d]=%f\n", i, out3[i], i, ioutput_nodes[i]);
     }
 }
 
@@ -341,60 +344,56 @@ __global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCo
 {
     int sample = blockIdx.x * blockDim.x + threadIdx.x;
 
-    //for (int sample = 0; sample < testing_samples; ++sample) {
-        if (sample % 100 == 0) {
-            printf("Sample %d\n", sample);
+    // for (int sample = 0; sample < testing_samples; ++sample) {
+
+    // Getting (image, label)
+    for (int j = 0; j < image_height; ++j) {
+        for (int i = 0; i < image_width; ++i) {
+            const int pos = j * image_width + i;
+            out1[pos] = images[sample * input_nodes + pos];
         }
+    }
 
-        // Getting (image, label)
-        for (int j = 0; j < image_height; ++j) {
-            for (int i = 0; i < image_width; ++i) {
-                const int pos = j * image_width + i;
-                out1[pos] = images[sample * input_nodes + pos];
-            }
+    int label = labels[sample]; // read_image();
+
+    for (int i = 0; i < output_nodes; ++i) {
+        expected[i] = 0.0;
+    }
+    expected[label] = 1.0;
+
+    // Classification - forward_learning procedure
+    forward_learning(w1, w2);
+
+    // Prediction
+    int predict = 0;
+    for (int i = 1; i < output_nodes; ++i) {
+        printf("out3[%d]=%f, out3[%d]=%f\n", i, out3[i], predict, out3[predict]);
+        if (out3[i] > out3[predict]) {
+            predict = i;
         }
+    }
 
-        for (int i = 0; i < output_nodes; ++i) {
-            expected[i] = 0.0;
-        }
-        expected[(int)labels[sample]] = 1.0;
+    // Write down the classification result and the squared error
+    float error = square_error();
+    printf("Error: %0.6lf\n", error);
 
-        int label = labels[sample]; // read_image();
-
-        // Classification - forward_learning procedure
-        forward_learning(w1, w2);
-
-        // Prediction
-        int predict = 0;
-        for (int i = 1; i < output_nodes; ++i) {
-            printf("out3[%d]=%f, out3[%d]=%f\n", i, out3[i], predict, out3[predict]);
-            if (out3[i] > out3[predict]) {
-                predict = i;
-            }
-        }
-
-        // Write down the classification result and the squared error
-        float error = square_error();
-        printf("Error: %0.6lf\n", error);
-
-        if (label == predict) {
-            atomicAdd(nCorrect, 1);
-            printf("Classification: YES. Label = %d. Prediction = %d\n", label, predict);
-            // printf("Sample %d: YES. Label = %d. Prediction = %d\n", sample, label, predict);
-        } else {
-            printf("Classification: NO. Label = %d. Prediction = %d\n", label, predict);
-            // printf("Sample %d: NO. Label = %d. Prediction = %d\n", sample, label, predict);
-        }
+    if (label == predict) {
+        atomicAdd(nCorrect, 1);
+        printf("Classification: YES. Label = %d. Prediction = %d\n", label, predict);
+        // printf("Sample %d: YES. Label = %d. Prediction = %d\n", sample, label, predict);
+    } else {
+        printf("Classification: NO. Label = %d. Prediction = %d\n", label, predict);
+        // printf("Sample %d: NO. Label = %d. Prediction = %d\n", sample, label, predict);
+    }
     //}
 
     // Summary
-    //float accuracy = (float)(*nCorrect) / testing_samples * 100.0;
-    //printf("Number of correct samples: %d/%d\n", *nCorrect, testing_samples);
-    //printf("Accuracy: %0.2lf\n", accuracy);
+    // float accuracy = (float)(*nCorrect) / testing_samples * 100.0;
+    // printf("Number of correct samples: %d/%d\n", *nCorrect, testing_samples);
+    // printf("Accuracy: %0.2lf\n", accuracy);
 
     // report << "Number of correct samples: " << nCorrect << " / " << testing_samples << std::endl;
     // report << "Accuracy: " << accuracy << std::endl;
-
 }
 
 __global__ void kernel(float *w1)
@@ -518,10 +517,6 @@ int main(int argc, char **argv)
         // Load model (weight matrices) of a trained Neural Network
         load_model_from_backup(model_fn);
 
-        for (int i = 0; i < 10; i++) {
-            printf("HOST w1[%d]=%f\n", i, w1[i]);
-        }
-
         // CUDA MALLOCS
         float *cuda_w1, *cuda_w2;
         int *cuda_images, *cuda_labels, *cuda_num_correct;
@@ -538,13 +533,15 @@ int main(int argc, char **argv)
         cudaMemcpy(cuda_labels, labels, images_2d.size() * sizeof(int), cudaMemcpyHostToDevice);
         cudaMemcpy(cuda_num_correct, new int(0), sizeof(int), cudaMemcpyHostToDevice);
 
-
         testing<<<10, 1000>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
         cudaDeviceSynchronize();
 
         int *result = new int(3);
         cudaMemcpy(result, cuda_num_correct, sizeof(int), cudaMemcpyDeviceToHost);
-        printf("Total %d\n", *result);
+
+        float accuracy = (float)(*result) / testing_samples * 100.0;
+        printf("Number of correct samples: %d/%d\n", *result, testing_samples);
+        printf("Accuracy: %0.2lf\n", accuracy);
 
         cudaFree(cuda_w1);
         cudaFree(cuda_w2);
