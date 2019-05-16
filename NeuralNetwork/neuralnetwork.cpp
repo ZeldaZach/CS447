@@ -24,7 +24,7 @@ const char *model_fn = "neural_network_matrices.txt";
 const char *report_fn = "training_report.txt";
 
 // Data constraints
-const int testing_samples = 500, training_samples = 500, image_width = 28, image_height = 28;
+const int testing_samples = 10'000, training_samples = 60'000, image_width = 28, image_height = 28;
 
 // Neural network constraints
 const int input_nodes = image_width * image_height, hidden_nodes = 128, output_nodes = 10;
@@ -150,7 +150,7 @@ __device__ void forward_learning(float *w1,
                                  float *out11,
                                  bool use_local = false)
 {
-    int sample = blockIdx.x * blockDim.x + threadIdx.x;
+    // int sample = blockIdx.x * blockDim.x + threadIdx.x;
 
     float tmp_out2[hidden_nodes];
 
@@ -166,7 +166,7 @@ __device__ void forward_learning(float *w1,
     for (int i = 0; i < input_nodes; ++i) {
         for (int j = 0; j < hidden_nodes; ++j) {
             ihidden_nodes1[j] += out11[i] * w1[i * hidden_nodes + j];
-            printf("[%d] ihidden_nodes1[%d] += %f * %f\n", sample, j, out11[i], w1[i * hidden_nodes + j]);
+            // printf("[%d] ihidden_nodes1[%d] += %f * %f\n", sample, j, out11[i], w1[i * hidden_nodes + j]);
         }
     }
 
@@ -186,14 +186,14 @@ __device__ void forward_learning(float *w1,
                 ioutput_nodes1[j] += out2[i] * w2[i * output_nodes + j];
             } else {
                 ioutput_nodes1[j] += tmp_out2[i] * w2[i * output_nodes + j];
-                printf("[%d] ioutput_nodes1[%d] += %f * %f\n", sample, j, tmp_out2[i], w2[i * output_nodes + j]);
+                // printf("[%d] ioutput_nodes1[%d] += %f * %f\n", sample, j, tmp_out2[i], w2[i * output_nodes + j]);
             }
         }
     }
 
     for (int i = 0; i < output_nodes; ++i) {
         out31[i] = activation_function(ioutput_nodes1[i]);
-        printf("[%d] out31[%d] = %f, ioutput_nodes1[%d]=%f\n", sample, i, out31[i], i, ioutput_nodes1[i]);
+        // printf("[%d] out31[%d] = %f, ioutput_nodes1[%d]=%f\n", sample, i, out31[i], i, ioutput_nodes1[i]);
     }
 }
 
@@ -436,11 +436,13 @@ __global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCo
     for (int j = 0; j < image_height; ++j) {
         for (int i = 0; i < image_width; ++i) {
             const int pos = j * image_width + i;
-            out11[pos] = images[sample * image_height*image_width + pos];
+            out11[pos] = images[sample * image_height * image_width + pos];
 
+            /*
             if (sample == 118) {
                 printf("[118] out11[%d]=%f\n", pos, out11[pos]);
             }
+             */
         }
     }
 
@@ -453,7 +455,7 @@ __global__ void testing(float *w1, float *w2, int *images, int *labels, int *nCo
     // Prediction
     int predict = 0;
     for (int i = 1; i < output_nodes; ++i) {
-        printf("[%d] out3[%d]=%f, out3[%d]=%f\n", sample, i, out31[i], predict, out31[predict]);
+        // printf("[%d] out3[%d]=%f, out3[%d]=%f\n", sample, i, out31[i], predict, out31[predict]);
         if (out31[i] > out31[predict]) {
             predict = i;
         }
@@ -561,22 +563,26 @@ int main(int argc, char **argv)
         gpu_assert(
             cudaMemcpyToSymbol(cuda_w2, w2, hidden_nodes * output_nodes * sizeof(float), 0, cudaMemcpyHostToDevice));
 
-        // kernel<<<10, 10>>>();
-        training<<<50, 10>>>(cuda_images, cuda_labels);
+        // 600 blocks of 1000 threads
+        training<<<training_samples/1000, training_samples/60>>>(cuda_images, cuda_labels);
         cudaDeviceSynchronize();
 
+        /*
         for (int i = 0; i < 10; i++) {
             printf("w2[%d]=%f\n", i, w2[i]);
         }
+         */
 
         gpu_assert(
             cudaMemcpyFromSymbol(w1, cuda_w1, input_nodes * hidden_nodes * sizeof(float), 0, cudaMemcpyDeviceToHost));
         gpu_assert(
             cudaMemcpyFromSymbol(w2, cuda_w2, hidden_nodes * output_nodes * sizeof(float), 0, cudaMemcpyDeviceToHost));
 
+        /*
         for (int i = 0; i < 10; i++) {
             printf("w2[%d]=%f\n", i, w2[i]);
         }
+         */
 
         save_weights_to_file(model_fn);
 
@@ -626,7 +632,9 @@ int main(int argc, char **argv)
         gpu_assert(cudaMemcpy(cuda_labels, labels, images_2d.size() * sizeof(int), cudaMemcpyHostToDevice));
         gpu_assert(cudaMemcpy(cuda_num_correct, new int(0), sizeof(int), cudaMemcpyHostToDevice));
 
-        testing<<<5, 100>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
+        // 10k tests => 100 blocks of 100 threads
+        testing<<<testing_samples / 100, testing_samples / 100>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels,
+                                                                  cuda_num_correct);
         cudaDeviceSynchronize();
 
         int *result = new int(3);
