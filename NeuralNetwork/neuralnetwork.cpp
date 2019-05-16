@@ -32,6 +32,14 @@ const int epochs = 512;
 
 __device__ float cuda_w1[input_nodes * hidden_nodes], cuda_w2[hidden_nodes * output_nodes], out2[hidden_nodes];
 
+/*
+ * Write to NEW, read from OLD. cudaMemCpy(D2D) after back_prop finishes
+ * Double Buffering
+ *
+ * Compute avg gradient for images, then do updates to weights
+ */
+//__device__ float cuda_w1_new[];
+
 // const floats, accessible from both host/device this way
 #define learning_rate 0.001
 #define momentum 0.9
@@ -188,42 +196,6 @@ __device__ void forward_learning(float *w1,
         printf("[%d] out31[%d] = %f, ioutput_nodes1[%d]=%f\n", sample, i, out31[i], i, ioutput_nodes1[i]);
     }
 }
-
-/*
-__device__ void forward_learning(float *w1, float *w2)
-{
-    for (int i = 0; i < hidden_nodes; ++i) {
-        ihidden_nodes[i] = 0.0;
-    }
-
-    for (int i = 0; i < output_nodes; ++i) {
-        ioutput_nodes[i] = 0.0;
-        out3[i] = 0.0;
-    }
-
-    for (int i = 0; i < input_nodes; ++i) {
-        for (int j = 0; j < hidden_nodes; ++j) {
-            ihidden_nodes[j] += out1[i] * w1[i * hidden_nodes + j];
-        }
-    }
-
-    for (int i = 0; i < hidden_nodes; ++i) {
-        out2[i] = activation_function(ihidden_nodes[i]);
-    }
-
-    for (int i = 0; i < hidden_nodes; ++i) {
-        for (int j = 0; j < output_nodes; ++j) {
-            // printf("ioutput_nodes[%d]=%f, adding %f*%f\n", j, ioutput_nodes[j], out2[i], w2[i * output_nodes + j]);
-            ioutput_nodes[j] += out2[i] * w2[i * output_nodes + j];
-        }
-    }
-
-    for (int i = 0; i < output_nodes; ++i) {
-        out3[i] = activation_function(ioutput_nodes[i]);
-        // printf("out3[%d] = %f, ioutput_nodes[%d]=%f\n", i, out3[i], i, ioutput_nodes[i]);
-    }
-}
-*/
 
 // Normalize error
 __device__ float square_error(float *out3, float *expected)
