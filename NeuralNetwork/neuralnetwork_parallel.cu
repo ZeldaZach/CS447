@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <cuda.h>
 #include <cuda_runtime_api.h>
@@ -20,7 +21,7 @@ void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = tru
 }
 
 // Output files
-const char *model_fn = "neural_network_matrices.txt";
+const char *model_fn = "neural_network_matrices";
 const char *report_fn = "training_report.txt";
 
 // Data constraints
@@ -104,9 +105,9 @@ void init_nn_matrices()
     }
 }
 
-void load_model_from_backup(std::string file_name)
+void load_model_from_backup(std::string file_name, long test_file_number)
 {
-    std::ifstream file(file_name, std::ios::in);
+    std::ifstream file(file_name + std::to_string(test_file_number) + ".txt", std::ios::in);
 
     if (!file.is_open()) {
         printf("Unable to open matrix file\n");
@@ -489,23 +490,24 @@ int main(int argc, char **argv)
     gpu_assert(cudaDeviceSetLimit(cudaLimitPrintfFifoSize, 1024000 * 10 * 10));
 
     bool will_test = false, will_train = false;
+    long samples_so_far = training_samples;
     if (argc == 1) {
         will_train = true;
         will_test = true;
-    } else if (argc == 2) {
+    } else if (argc >= 2) {
         // strcmp (key,buffer) != 0
         if (strcmp(argv[1], "train") == 0) {
             will_train = true;
         } else if (strcmp(argv[1], "test") == 0) {
             will_test = true;
-        } else if (strcmp(argv[1], "both") == 0) {
-            will_train = true;
-            will_test = true;
+            if (argc >= 3)
+                samples_so_far = atoi(argv[2]);
         } else {
-            std::cout << "Usage: " << argv[0] << " ['train', 'test', 'both']" << std::endl;
+            std::cout << "Usage: " << argv[0] << " ['train', 'test']" << std::endl;
             exit(1);
         }
     }
+
 
     project_details();
 
@@ -563,8 +565,8 @@ int main(int argc, char **argv)
         gpu_assert(
             cudaMemcpyToSymbol(cuda_w2, w2, hidden_nodes * output_nodes * sizeof(float), 0, cudaMemcpyHostToDevice));
 
-        // 600 blocks of 1000 threads
-        training<<<training_samples/1000, training_samples/60>>>(cuda_images, cuda_labels);
+        // 60 blocks of 1000 threads
+        training<<<60, 1000>>>(cuda_images, cuda_labels);
         cudaDeviceSynchronize();
 
         /*
@@ -613,7 +615,7 @@ int main(int argc, char **argv)
         images = vectorToArray<int>(images_2d);
 
         // Load model (weight matrices) of a trained Neural Network
-        load_model_from_backup(model_fn);
+        load_model_from_backup(model_fn, samples_so_far);
 
         // CUDA MALLOCS
         float *cuda_w1, *cuda_w2;
@@ -632,9 +634,10 @@ int main(int argc, char **argv)
         gpu_assert(cudaMemcpy(cuda_labels, labels, images_2d.size() * sizeof(int), cudaMemcpyHostToDevice));
         gpu_assert(cudaMemcpy(cuda_num_correct, new int(0), sizeof(int), cudaMemcpyHostToDevice));
 
-        // 10k tests => 100 blocks of 100 threads
-        testing<<<testing_samples / 100, testing_samples / 100>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels,
-                                                                  cuda_num_correct);
+        printf("Starting testing\n");
+
+        // 10k tests => 10 blocks of 1000 threads
+        testing<<<10, 1000>>>(cuda_w1, cuda_w2, cuda_images, cuda_labels, cuda_num_correct);
         cudaDeviceSynchronize();
 
         int *result = new int(3);
