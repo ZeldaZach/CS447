@@ -1,27 +1,12 @@
 #include <cmath>
 #include <cstring>
-#include <cuda.h>
-#include <cuda_runtime_api.h>
 #include <fstream>
 #include <iostream>
 #include <string>
 #include <vector>
 
-/*
-#define gpu_assert(rv) gpu_assert_h((rv), __FILE__, __LINE__)
-void gpu_assert_h(cudaError_t code, const char *file, int line, bool abort = true)
-{
-    if (code != cudaSuccess) {
-        fprintf(stderr, "GPUassert: %s %s %d\n", cudaGetErrorString(code), file, line);
-        if (abort) {
-            exit(code);
-        }
-    }
-}
-*/
-
 // Output files
-const char *model_fn = "neural_network_matrices.txt";
+const char *model_fn = "neural_network_matrices";
 const char *report_fn = "training_report.txt";
 
 // Data constraints
@@ -258,9 +243,9 @@ void read_images(int sample_count)
     }
 }
 
-void save_weights_to_file(std::string file_name)
+void save_weights_to_file(std::string file_name, int samples_so_far)
 {
-    std::ofstream file(file_name.c_str(), std::ios::out);
+    std::ofstream file((file_name + std::to_string(samples_so_far) + ".txt").c_str(), std::ios::out);
 
     // read_image layer -> Hidden layer
     for (int i = 0; i < input_nodes; ++i) {
@@ -312,13 +297,13 @@ void training(float *, float *)
         //       << std::endl;
 
         // Save the current network (weights) every so often
-        // if (sample % 100 == 0) {
-        //    save_weights_to_file(model_fn);
-        //}
+        if (sample % 250 == 0) {
+            save_weights_to_file(model_fn, sample);
+        }
     }
 
     // Save the final network
-    save_weights_to_file(model_fn);
+    save_weights_to_file(model_fn, training_samples);
 }
 
 void testing()
