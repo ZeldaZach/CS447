@@ -13,3 +13,10 @@ Training: CUDA concurrency _not_ achieved for training due to race conditions wi
 Epochs are saved every 100 cycles, so you can run the tests against the file every so often
 
 Testing: CUDA concurrency achieved for testing of the sample system. Since testing is a read-only operation, multiple threads/blocks can be used to simulate quick interactions with forward_learning.
+
+### My tests: (Using 512 epochs)
+- 500 training nodes = 65.61%
+- 2500 training nodes = 85.85%
+- 5000 training nodes = 89.62%
+- 20000 training nodes = 92.30%
+- 60000 training nodes = 95.02%
